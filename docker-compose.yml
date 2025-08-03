@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mij-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mij_db
+    environment:
+      DATABASE_URL: postgresql://user:password@mij_db:5432/mij_db
+      
+  mij_db:
+    image: postgres:15
+    container_name: mij_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mij_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - mij_db_data:/var/lib/postgresql/data
+
+volumes:
+  mij_db_data:
