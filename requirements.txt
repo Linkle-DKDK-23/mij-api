@@ -2,3 +2,11 @@ fastapi
 uvicorn[standard]
 boto3
 python-dotenv
+alembic
+SQLAlchemy
+psycopg2-binary
+pydantic_settings
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9
+PyJWT==2.9.0
+email-validator==2.2.0
