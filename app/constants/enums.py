@@ -1,0 +1,13 @@
+
+# アカウント種別
+class AccountType:
+    GENERAL_USER = 1
+    CREATOR = 2
+    ADMIN = 3
+
+# アカウントステータス
+class AccountStatus:
+    ACTIVE = 1
+    INACTIVE = 2
+    SUSPENDED = 3
+    DELETED = 4
