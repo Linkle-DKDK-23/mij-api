@@ -25,6 +25,7 @@ def create_user(db: Session, user_create: UserCreate) -> Users:
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    return db_user
 
 def check_email_exists(db: Session, email: str) -> bool:
     """
