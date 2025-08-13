@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.user import Users
 from app.schemas.user import UserCreate
 from app.core.security import hash_password
+from sqlalchemy import select
 from app.constants.enums import (
     AccountType, 
     AccountStatus
@@ -33,3 +34,15 @@ def check_email_exists(db: Session, email: str) -> bool:
     """
     result = db.query(Users).filter(Users.email == email).first()
     return result is not None
+
+def get_user_by_email(db: Session, email: str) -> Users:
+    """
+    メールアドレスによるユーザー取得
+    """
+    return db.scalar(select(Users).where(Users.email == email))
+
+def get_user_by_id(db: Session, user_id: str) -> Users:
+    """
+    ユーザーIDによるユーザー取得
+    """
+    return db.get(Users, user_id)
