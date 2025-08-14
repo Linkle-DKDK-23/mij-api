@@ -7,7 +7,15 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_SERVER: str
     POSTGRES_PORT: int
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
+
+    ACCESS_TOKEN_EXPIRE_MIN: int = 43200
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    COOKIE_DOMAIN: str | None = None
+    COOKIE_SECURE: bool = True
+    COOKIE_SAMESITE: str = "lax"
+    COOKIE_PATH: str = "/"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.routers import api_router
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.middlewares.csrf import CSRFMiddleware
 app = FastAPI()
 
 # ========================
@@ -24,4 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# CSRF ミドルウェアは CORS より後でOK
+app.add_middleware(CSRFMiddleware)
 app.include_router(api_router)
