@@ -20,6 +20,7 @@ def create_user(db: Session, user_create: UserCreate) -> Users:
     db_user = Users(
         email=user_create.email,
         password_hash=hash_password(user_create.password),
+        slug=user_create.name,
         role=AccountType.GENERAL_USER,
         status=AccountStatus.ACTIVE
     )
@@ -33,6 +34,13 @@ def check_email_exists(db: Session, email: str) -> bool:
     メールアドレスの重複チェック
     """
     result = db.query(Users).filter(Users.email == email).first()
+    return result is not None
+
+def check_slug_exists(db: Session, slug: str) -> bool:
+    """
+    スラッグの重複チェック
+    """
+    result = db.query(Users).filter(Users.slug == slug).first()
     return result is not None
 
 def get_user_by_email(db: Session, email: str) -> Users:

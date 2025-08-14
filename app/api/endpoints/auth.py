@@ -92,14 +92,8 @@ def logout(response: Response):
 
 
 
-@router.post("/refresh")
-def refresh_token(response: Response, refresh_token: str | None = Header(default=None),  # 使わない例
-                  csrf_token: str | None = Header(default=None),  # 使わない例
-                  # 実際は Cookie から読む:
-                  refresh_cookie: str | None = Depends(lambda refresh_token=Header(None): None),
-                  # 上の書き方は型合わせのダミー。実際は Request.cookies を読むか、以下のように直接引数で:
-                  ):
-    # Request から Cookie を読む実装の方が分かりやすい
-    # → ここでは簡単のため、後段の get_refresh_from_cookie を使う
-    test = "aaaa"
-    raise HTTPException(status_code=500, detail="Use the version below")  # ダミー
+# @router.post("/refresh")
+# def refresh_token(response: Response, refresh_token: str | None = Header(default=None), csrf_token: str | None = Header(default=None)):
+#     # Request から Cookie を読む実装の方が分かりやすい
+#     # → ここでは簡単のため、後段の get_refresh_from_cookie を使う
+#     raise HTTPException(status_code=500, detail="Use the version below")  # ダミー

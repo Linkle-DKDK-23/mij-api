@@ -16,11 +16,13 @@ if TYPE_CHECKING:
     from .plans import Plans
     from .subscriptions import Subscriptions
     from .orders import Orders
+    from .creator_type import CreatorType
 
 class Users(Base):
     __tablename__ = "users"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    slug: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
     email: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     password_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -36,5 +38,6 @@ class Users(Base):
     plans: Mapped[List["Plans"]] = relationship("Plans", back_populates="creator")
     subscriptions: Mapped[List["Subscriptions"]] = relationship("Subscriptions", back_populates="user")
     orders: Mapped[List["Orders"]] = relationship("Orders", back_populates="user")
+    creator_type: Mapped[Optional["CreatorType"]] = relationship("CreatorType", back_populates="user", uselist=False)
     
      

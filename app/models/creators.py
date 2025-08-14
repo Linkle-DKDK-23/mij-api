@@ -17,7 +17,12 @@ class Creators(Base):
     __tablename__ = "creators"
 
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    slug: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
+    name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    first_name_kana: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_name_kana: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    phone_number: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    birth_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     category_id: Mapped[Optional[UUID]] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

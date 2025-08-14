@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
 
-    ACCESS_TOKEN_EXPIRE_MIN: int = 15
+    ACCESS_TOKEN_EXPIRE_MIN: int = 43200
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
     COOKIE_DOMAIN: str | None = None
     COOKIE_SECURE: bool = True

@@ -22,6 +22,8 @@ from .audit import AuditLogs
 from .payouts import PayoutAccounts, Payouts, PayoutItems, CreatorBalances
 from .tags import Tags, PostTags
 from .i18n import I18nLanguages, I18nTexts
+from .creator_type import CreatorType
+from .gender import Gender
 
 __all__ = [
     "Users", "Profiles", "Creators", "Genres", "Categories", "Posts", "PostCategories",
@@ -29,5 +31,6 @@ __all__ = [
     "Orders", "OrderItems", "Payments", "Refunds", "Entitlements", "Follows", "Likes", "Comments",
     "Bookmarks", "Notifications", "IdentityVerifications", "IdentityDocuments",
     "Reports", "AuditLogs", "PayoutAccounts", "Payouts", "PayoutItems",
-    "CreatorBalances", "Tags", "PostTags", "I18nLanguages", "I18nTexts"
+    "CreatorBalances", "Tags", "PostTags", "I18nLanguages", "I18nTexts",
+    "CreatorType", "Gender"
 ]
