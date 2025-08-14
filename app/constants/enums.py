@@ -11,3 +11,14 @@ class AccountStatus:
     INACTIVE = 2
     SUSPENDED = 3
     DELETED = 4
+
+class CreatorStatus:
+    PENDING = 1
+    VERIFIED = 2
+    REJECTED = 3
+    SUSPENDED = 4
+
+class VerificationStatus:
+    PENDING = 0
+    APPROVED = 1
+    REJECTED = 2
