@@ -22,3 +22,13 @@ class VerificationStatus:
     PENDING = 0
     APPROVED = 1
     REJECTED = 2
+
+class IdentityStatus:
+    PENDING = 0
+    APPROVED = 1
+    REJECTED = 2
+
+class IdentityKind:
+    FRONT = 1
+    BACK = 2
+    SELFIE = 3

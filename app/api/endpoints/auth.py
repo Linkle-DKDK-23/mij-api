@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Response, Request
 from app.core.security import create_access_token, decode_token
 from app.db.base import get_db
 from app.schemas.auth import LoginIn, TokenOut, LoginCookieOut
@@ -13,8 +13,10 @@ from app.core.security import (
     decode_token, 
     new_csrf_token
 )
-from app.core.cookies import set_auth_cookies, clear_auth_cookies, REFRESH_COOKIE, CSRF_COOKIE
+from app.core.cookies import set_auth_cookies, clear_auth_cookies, REFRESH_COOKIE, CSRF_COOKIE, ACCESS_COOKIE
+from app.core.config import settings
 from app.deps.auth import get_current_user
+
 
 
 router = APIRouter()
@@ -92,8 +94,38 @@ def logout(response: Response):
 
 
 
-# @router.post("/refresh")
-# def refresh_token(response: Response, refresh_token: str | None = Header(default=None), csrf_token: str | None = Header(default=None)):
-#     # Request から Cookie を読む実装の方が分かりやすい
-#     # → ここでは簡単のため、後段の get_refresh_from_cookie を使う
-#     raise HTTPException(status_code=500, detail="Use the version below")  # ダミー
+@router.post("/refresh")
+def refresh_token(request: Request, response: Response):
+    refresh = request.cookies.get(REFRESH_COOKIE)
+    if not refresh:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+
+    try:
+        payload = decode_token(refresh)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+
+    user_id = payload.get("sub")
+    # 必要ならDBでBAN/退会チェックなど
+
+    # 新しい短命Access & CSRF
+    new_access = create_access_token(user_id)
+    new_csrf = new_csrf_token()
+
+    # Set-Cookie（Access: HttpOnly / CSRF: 非HttpOnly）
+    response.set_cookie(
+        ACCESS_COOKIE, new_access,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MIN * 60,
+        domain=settings.COOKIE_DOMAIN, secure=settings.COOKIE_SECURE,
+        httponly=True, samesite=settings.COOKIE_SAMESITE, path=settings.COOKIE_PATH,
+    )
+    response.set_cookie(
+        CSRF_COOKIE, new_csrf,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MIN * 60,
+        domain=settings.COOKIE_DOMAIN, secure=settings.COOKIE_SECURE,
+        httponly=False, samesite=settings.COOKIE_SAMESITE, path=settings.COOKIE_PATH,
+    )
+    return {"message": "refreshed", "csrf_token": new_csrf}
