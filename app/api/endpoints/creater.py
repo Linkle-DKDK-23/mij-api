@@ -11,18 +11,20 @@ from app.crud.creater_crud import (
     create_creator,
     update_creator,
     get_creator_by_user_id,
-    create_identity_verification,
-    update_identity_verification_status,
     create_identity_document,
     get_identity_verification_by_user_id
 )
+from app.deps.auth import get_current_user
+from app.crud.gender_type import create_creator_type
+from app.crud.gender import get_genders, get_gender_by_slug
+from app.models.creator_type import CreatorType
 
 router = APIRouter()
 
 @router.post("/register", response_model=CreatorOut)
 def register_creator(
     creator_create: CreatorCreate,
-    user_id: UUID,
+    user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -37,11 +39,30 @@ def register_creator(
         CreatorOut: クリエイター情報
     """
     try:
-        existing_creator = get_creator_by_user_id(db, user_id)
+        existing_creator = get_creator_by_user_id(db, user.id)
         if existing_creator:
             raise HTTPException(status_code=400, detail="Creator already registered")
         
-        return create_creator(db, creator_create, user_id)
+
+        creater = create_creator(db, creator_create, user.id)
+
+        # 性別を取得
+        genders = get_gender_by_slug(db, creator_create.gender_slug)
+        insert_data = [
+            {
+                "user_id": user.id,
+                "gender_id": gender_obj.id,
+            }
+            for gender_obj in genders
+        ]
+        db.bulk_insert_mappings(CreatorType, insert_data)
+
+        # 変更をコミット
+        db.commit()
+
+        # コミット後にリフレッシュ
+        db.refresh(creater)
+        return creater
     except Exception as e:
         print("クリエイター登録エラー: ", e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -69,26 +90,6 @@ def update_creator_profile(
         print("クリエイタープロフィール更新エラー: ", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/identity-verification", response_model=IdentityVerificationOut)
-def submit_identity_verification(
-    verification_create: IdentityVerificationCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    本人確認申請
-    
-    Args:
-        verification_create (IdentityVerificationCreate): 本人確認申請情報
-        db (Session): データベースセッション
-    
-    Returns:
-        IdentityVerificationOut: 本人確認情報
-    """
-    try:
-        return create_identity_verification(db, verification_create)
-    except Exception as e:
-        print("本人確認申請エラー: ", e)
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/verification-status", response_model=IdentityVerificationOut)
 def get_verification_status(
@@ -114,26 +115,6 @@ def get_verification_status(
         print("本人確認ステータス取得エラー: ", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/identity-documents", response_model=IdentityDocumentOut)
-def upload_identity_document(
-    document_create: IdentityDocumentCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    本人確認書類アップロード
-    
-    Args:
-        document_create (IdentityDocumentCreate): 書類アップロード情報
-        db (Session): データベースセッション
-    
-    Returns:
-        IdentityDocumentOut: アップロードされた書類情報
-    """
-    try:
-        return create_identity_document(db, document_create)
-    except Exception as e:
-        print("本人確認書類アップロードエラー: ", e)
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/profile", response_model=CreatorOut)
 def get_creator_profile(

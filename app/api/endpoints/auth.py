@@ -129,3 +129,17 @@ def refresh_token(request: Request, response: Response):
         httponly=False, samesite=settings.COOKIE_SAMESITE, path=settings.COOKIE_PATH,
     )
     return {"message": "refreshed", "csrf_token": new_csrf}
+
+
+@router.get("/csrf")
+def get_csrf_token(request: Request):
+    csrf = request.cookies.get(CSRF_COOKIE)
+
+    print(f"csrf_header={request.headers.get('csrf-token') or request.headers.get('x-csrf-token')}")
+    print(f"cookies={request.cookies}")
+    print(f"csrf={csrf}")
+    if not csrf:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing CSRF token")
+    
+    return "ok"
+

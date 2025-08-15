@@ -12,11 +12,13 @@ class AccountStatus:
     SUSPENDED = 3
     DELETED = 4
 
+# クリエイターステータス
 class CreatorStatus:
-    PENDING = 1
-    VERIFIED = 2
-    REJECTED = 3
-    SUSPENDED = 4
+    ENTERED = 1
+    APPLICATED = 2
+    VERIFIED = 3
+    REJECTED = 4
+    SUSPENDED = 5
 
 class VerificationStatus:
     PENDING = 0

@@ -27,5 +27,4 @@ class Categories(Base):
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     genre: Mapped["Genres"] = relationship("Genres", back_populates="categories")
-    creators: Mapped[List["Creators"]] = relationship("Creators", back_populates="category")
     post_categories: Mapped[List["PostCategories"]] = relationship("PostCategories", back_populates="category")

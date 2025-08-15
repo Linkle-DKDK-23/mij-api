@@ -23,8 +23,7 @@ def create_identity_verification(db: Session, user_id: str, status: int) -> Iden
         notes=None
     )
     db.add(db_verification)
-    db.commit()
-    db.refresh(db_verification)
+    db.flush()  # IDを取得するためにflush
     return db_verification
 
 def get_identity_verification_by_user_id(db: Session, user_id: str) -> IdentityVerifications:
@@ -67,8 +66,7 @@ def create_identity_document(db: Session, verification_id: str, kind: int, stora
         storage_key=storage_key
     )
     db.add(db_document)
-    db.commit()
-    db.refresh(db_document)
+    db.flush()
     return db_document
 
 def update_identity_verification(db: Session, verification_id: str, status: int, checked_at: datetime) -> IdentityVerifications:
@@ -85,7 +83,6 @@ def update_identity_verification(db: Session, verification_id: str, status: int,
     Returns:
         IdentityVerifications: 認証情報
     """
-    status = status
     db_verification = db.query(IdentityVerifications).filter(IdentityVerifications.id == verification_id).first()
     db_verification.status = status
     db_verification.checked_at = checked_at

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class CreatorCreate(BaseModel):
@@ -10,8 +10,7 @@ class CreatorCreate(BaseModel):
     address: Optional[str] = Field(None, max_length=200)
     phone_number: str = Field(min_length=10, max_length=15)
     birth_date: Optional[datetime] = None
-    category_id: Optional[UUID] = None
-    country_code: Optional[str] = Field(None, max_length=3)
+    gender_slug: Optional[List[str]] = Field(None, max_length=100)
 
 class CreatorUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -20,8 +19,6 @@ class CreatorUpdate(BaseModel):
     address: Optional[str] = Field(None, max_length=200)
     phone_number: Optional[str] = Field(None, min_length=10, max_length=15)
     birth_date: Optional[datetime] = None
-    category_id: Optional[UUID] = None
-    country_code: Optional[str] = Field(None, max_length=3)
 
 class CreatorOut(BaseModel):
     user_id: UUID
@@ -32,8 +29,6 @@ class CreatorOut(BaseModel):
     phone_number: Optional[str]
     birth_date: Optional[datetime]
     status: int
-    category_id: Optional[UUID]
-    country_code: Optional[str]
     tos_accepted_at: Optional[datetime]
     created_at: datetime
     

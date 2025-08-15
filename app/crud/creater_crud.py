@@ -10,14 +10,6 @@ from app.schemas.creator import CreatorCreate, CreatorUpdate, IdentityVerificati
 from app.constants.enums import CreatorStatus, VerificationStatus, AccountType
 
 def create_creator(db: Session, creator_create: CreatorCreate, user_id: UUID) -> Creators:
-    """
-    クリエイターを作成する
-    
-    Args:
-        db: データベースセッション
-        creator_create: クリエイター作成情報
-        user_id: ユーザーID
-    """
     db_creator = Creators(
         user_id=user_id,
         name=creator_create.name,
@@ -26,20 +18,28 @@ def create_creator(db: Session, creator_create: CreatorCreate, user_id: UUID) ->
         address=creator_create.address,
         phone_number=creator_create.phone_number,
         birth_date=creator_create.birth_date,
-        status=CreatorStatus.PENDING,
-        category_id=creator_create.category_id,
-        country_code=creator_create.country_code,
+        status=CreatorStatus.ENTERED,
         tos_accepted_at=datetime.utcnow()
     )
     db.add(db_creator)
-    
+
+    # ユーザーのロール更新
     user = db.get(Users, user_id)
     if user:
         user.role = AccountType.CREATOR
-    
-    db.commit()
-    db.refresh(db_creator)
+
     return db_creator
+
+def update_creator_status(db: Session, user_id: UUID, status: CreatorStatus) -> Creators:
+    """
+    クリエイターステータスを更新する
+    """
+    creator = db.scalar(select(Creators).where(Creators.user_id == user_id))
+    if not creator:
+        raise HTTPException(status_code=404, detail="Creator not found")
+    
+    creator.status = status
+    return creator
 
 def update_creator(db: Session, user_id: UUID, creator_update: CreatorUpdate) -> Creators:
     """
