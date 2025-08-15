@@ -44,13 +44,13 @@ def presign_put(
         ExpiresIn=expires_in,
     )
     return {
-        "upload_url": url,
         "key": key,
+        "upload_url": url,
         "expires_in": expires_in,
         "required_headers": {
             "Content-Type": content_type,
             "x-amz-server-side-encryption": "aws:kms",
-            "x-amz-server-side-encryption-aws-kms-key-id": kms_alias,
+            "x-amz-server-side-encryption-aws-kms-key-id": KMS_ALIAS_IDENTITY,
         }
     }
 

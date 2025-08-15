@@ -9,10 +9,10 @@ from app.schemas.video import UploadRequest, PlayRequest, CreateUploadReq
 
 
 # Services/Repositories
-from app.services.s3_service import (
-    generate_presigned_url,
-    generate_play_url
-)
+# from app.services.s3.s3_service import (
+#     generate_presigned_url,
+#     generate_play_url
+# )
 
 router = APIRouter()
 

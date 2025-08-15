@@ -17,6 +17,7 @@ class PresignResponseItem(BaseModel):
     key: str
     upload_url: str
     expires_in: int
+    required_headers: Dict[str, str]
 
 class PresignResponse(BaseModel):
     verification_id: UUID

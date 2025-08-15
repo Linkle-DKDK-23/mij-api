@@ -19,10 +19,11 @@ from app.crud.identity import create_identity_verification, create_identity_docu
 from app.db.base import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+from app.services.s3.s3_service import bucket_exit_check
 
 router = APIRouter()
 
-from app.services.s3.client import s3_client, IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
+from app.services.s3.client import s3_client, IDENTITY_BUCKET
 s3 = s3_client()
 
 @router.post("/")
@@ -39,13 +40,13 @@ def kyc_presign_upload(
 ):
 
     """
-    Presign upload
+    アップロードURL生成
 
     Raises:
-        HTTPException: 
+        HTTPException: エラー
 
     Returns:
-        _type_: 
+        PresignResponse: アップロードURL
     """
 
     try:
@@ -64,30 +65,14 @@ def kyc_presign_upload(
 
         for f in body.files:
             key = identity_key(str(user.id), verification.id, f.kind, f.ext)
-            try:
-                url = s3.generate_presigned_url(
-                    "put_object",
-                    Params={
-                        "Bucket": IDENTITY_BUCKET,
-                        "Key": key,
-                        "ContentType": f.content_type,
-                        "ServerSideEncryption": "aws:kms",
-                        "SSEKMSKeyId": KMS_ALIAS_IDENTITY,
-                    },
-                    ExpiresIn=300,
-                )
-            except Exception:
-                raise HTTPException(500, "Failed to issue presigned URL")
+
+            response = presign_put("identity", key, f.content_type)
             
             uploads[f.kind] = PresignResponseItem(
-                key=key,
-                upload_url=url,
-                expires_in=300,
-                required_headers = {
-                    "Content-Type": f.content_type,
-                    "x-amz-server-side-encryption": "aws:kms",
-                    "x-amz-server-side-encryption-aws-kms-key-id": KMS_ALIAS_IDENTITY,
-                }
+                key=response["key"],
+                upload_url=response["upload_url"],
+                expires_in=response["expires_in"],
+                required_headers=response["required_headers"]
             )
             
             create_identity_document(db, verification.id, f.kind, key)
@@ -106,6 +91,15 @@ def kyc_complete(
 ):
     
     try:
+        """
+        認証情報更新
+
+        Raises:
+            HTTPException: エラー
+
+        Returns:
+            dict: 認証情報更新結果
+        """
         required = {"front","back","selfie"}
         present = {f.kind for f in body.files}
         missing = required - present
@@ -118,9 +112,7 @@ def kyc_complete(
         # S3存在確認
         for f in body.files:
             key = identity_key(str(user.id), str(body.verification_id), f.kind, f.ext)
-            try:
-                s3.head_object(Bucket=IDENTITY_BUCKET, Key=key)
-            except Exception:
+            if not bucket_exit_check("identity", key):
                 raise HTTPException(400, f"missing uploaded file: {f.kind}")
 
         update_identity_verification(
