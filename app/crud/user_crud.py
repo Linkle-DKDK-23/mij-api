@@ -9,7 +9,7 @@ from app.constants.enums import (
     AccountStatus
 )
 
-def create_user(db: Session, user_create: UserCreate, slug: str) -> Users:
+def create_user(db: Session, user_create: UserCreate) -> Users:
     """
     ユーザーを作成する
 
@@ -19,16 +19,14 @@ def create_user(db: Session, user_create: UserCreate, slug: str) -> Users:
     """
     # ランダム文字列5文字作成
     db_user = Users(
-        slug=slug,
-        name=user_create.name,
+        slug=user_create.name,
         email=user_create.email,
         password_hash=hash_password(user_create.password),
         role=AccountType.GENERAL_USER,
         status=AccountStatus.ACTIVE
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    db.flush()
     return db_user
 
 def check_email_exists(db: Session, email: str) -> bool:

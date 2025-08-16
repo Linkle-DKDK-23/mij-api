@@ -9,7 +9,7 @@ from app.crud.user_crud import (
 )
 from app.api.commons.utils import generate_code
 from app.deps.auth import get_current_user
-
+from app.crud.profile_crud import create_profile
 router = APIRouter()
 
 @router.post("/register", response_model=UserOut)
@@ -45,8 +45,16 @@ def register_user(
                 break
             raise HTTPException(status_code=500, detail="ユーザー名の生成に失敗しました")
 
-        return create_user(db, user_create, slug_code)
+        db_user = create_user(db, user_create)
+        db_profile = create_profile(db, db_user.id, slug_code)
+
+        db.commit()
+        db.refresh(db_user)
+        db.refresh(db_profile)
+
+        return db_user
     except Exception as e:
         print("ユーザー登録エラー: ", e)
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     
