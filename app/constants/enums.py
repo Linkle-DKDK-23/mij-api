@@ -34,3 +34,10 @@ class IdentityKind:
     FRONT = 1
     BACK = 2
     SELFIE = 3
+
+class PostStatus:
+    PENDING = 1
+    REJECTED = 2
+    UNPUBLISHED = 3
+    DELETED = 4
+    APPROVED = 5

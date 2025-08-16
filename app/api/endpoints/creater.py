@@ -17,7 +17,9 @@ from app.crud.creater_crud import (
 from app.deps.auth import get_current_user
 from app.crud.gender_type import create_creator_type
 from app.crud.gender import get_genders, get_gender_by_slug
+from app.crud.followes_crud import get_follower_count
 from app.models.creator_type import CreatorType
+from app.crud.post_crud import get_total_likes_by_user_id, get_posts_count_by_user_id
 
 router = APIRouter()
 
@@ -132,10 +134,29 @@ def get_creator_profile(
         CreatorOut: クリエイター情報
     """
     try:
+
+        # クリエイターを取得
         creator = get_creator_by_user_id(db, user_id)
+
         if not creator:
             raise HTTPException(status_code=404, detail="Creator not found")
-        return creator
+
+        # フォロワー数を取得
+        follower_count = get_follower_count(db, user_id)
+
+        # いいね数を取得
+        likes_count = get_total_likes_by_user_id(db, user_id)
+
+        # 各種投稿数を取得
+        posts_count = get_posts_count_by_user_id(db, user_id)
+
+
+        return {
+            "creator": creator,
+            "follower_count": follower_count,
+            "likes_count": likes_count,
+            "posts_count": posts_count
+        }
     except Exception as e:
         print("クリエイタープロフィール取得エラー: ", e)
         raise HTTPException(status_code=500, detail=str(e))
