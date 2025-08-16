@@ -3,7 +3,7 @@ from typing import List, Optional, TYPE_CHECKING
 from uuid import uuid4, UUID
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Text, SmallInteger, func
+from sqlalchemy import ForeignKey, Text, SmallInteger, Boolean, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, CITEXT
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .subscriptions import Subscriptions
     from .orders import Orders
     from .creator_type import CreatorType
+    from .gender import Gender
 
 class Users(Base):
     __tablename__ = "users"
@@ -38,6 +39,5 @@ class Users(Base):
     plans: Mapped[List["Plans"]] = relationship("Plans", back_populates="creator")
     subscriptions: Mapped[List["Subscriptions"]] = relationship("Subscriptions", back_populates="user")
     orders: Mapped[List["Orders"]] = relationship("Orders", back_populates="user")
-    creator_type: Mapped[Optional["CreatorType"]] = relationship("CreatorType", back_populates="user", uselist=False)
-    
-     
+    creator_type: Mapped[List["CreatorType"]] = relationship("CreatorType", back_populates="user", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin")
+    genders: Mapped[List["Gender"]] = relationship("Gender", secondary="creator_type", viewonly=True, lazy="selectin")

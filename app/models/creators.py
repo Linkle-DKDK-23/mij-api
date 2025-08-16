@@ -24,11 +24,7 @@ class Creators(Base):
     phone_number: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     birth_date: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
-    category_id: Mapped[Optional[UUID]] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
-    country_code: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    tax_info: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     tos_accepted_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     user: Mapped["Users"] = relationship("Users", back_populates="creator")
-    category: Mapped[Optional["Categories"]] = relationship("Categories", back_populates="creators")

@@ -23,4 +23,4 @@ class Gender(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
-    creator_type: Mapped[List["CreatorType"]] = relationship("CreatorType", back_populates="gender")
+    creator_type: Mapped[List["CreatorType"]] = relationship("CreatorType", back_populates="gender", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin")
