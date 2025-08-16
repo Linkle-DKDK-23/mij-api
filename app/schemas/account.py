@@ -2,6 +2,10 @@ from pydantic import BaseModel
 from typing import Optional
 
 class AccountInfoResponse(BaseModel):
+    slug: Optional[str]
+    display_name: Optional[str]
+    avatar_url: Optional[str]
+    
     followers_count: int
     following_count: int
     
