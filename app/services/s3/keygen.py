@@ -32,3 +32,15 @@ def identity_key(creator_id: str, submission_id: str, kind: str, ext: str) -> st
     """
     return f"{creator_id}/identity/{submission_id}/{kind}.{ext}"
 
+
+def account_asset_key(creator_id: str, kind: str, ext: str) -> str:
+    """
+    アバターキー生成
+
+    Args:
+        creator_id (str): クリエイターID
+        filename (str): ファイル名
+    Returns:
+        str: アバターキー
+    """
+    return f"profiles/{creator_id}/{kind}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4()}.{ext}"

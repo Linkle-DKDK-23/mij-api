@@ -12,8 +12,14 @@ def s3_client():
         config=Config(signature_version="s3v4")
     )
 
+# ビデオ
 VIDEO_BUCKET = os.environ.get("S3_BUCKET_NAME") 
 IDENTITY_BUCKET   = os.environ.get("KYC_BUCKET_NAME") 
 
+# 認証
 KMS_ALIAS_VIDEO = os.environ.get("KMS_ALIAS_VIDEO") 
 KMS_ALIAS_IDENTITY   = os.environ.get("KMS_ALIAS_KYC") 
+
+# アカウント
+ASSETS_BUCKET_NAME = os.environ.get("ASSETS_BUCKET_NAME")
+KMS_ALIAS_ACCOUNT = os.environ.get("KMS_ALIAS_ASSET")

@@ -2,14 +2,14 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict
 from app.schemas.identity import (
-    PresignResponse, 
-    PresignRequest, 
-    UploadItem, 
+    VerifyPresignResponse, 
     Kind, 
     CompleteRequest, 
     PresignResponseItem, 
     VerifyRequest, 
+    VerifyPresignRequest,
 )
+from app.schemas.commons import UploadItem, PresignResponseItem
 from app.deps.permissions import require_creator_auth
 from app.services.s3.keygen import identity_key
 from app.services.s3.presign import presign_put
@@ -27,15 +27,9 @@ router = APIRouter()
 from app.services.s3.client import s3_client, IDENTITY_BUCKET
 s3 = s3_client()
 
-@router.post("/")
-async def kyc_upload():
-    return {"message": "KYC upload"}
-
-
-
 @router.post("/presign-upload")
 def kyc_presign_upload(
-    body: PresignRequest, 
+    body: VerifyPresignRequest, 
     user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -87,7 +81,7 @@ def kyc_presign_upload(
         # 全ての処理が完了したら一括でコミット
         db.commit()
 
-        return PresignResponse(verification_id=verification.id, uploads=uploads)
+        return VerifyPresignResponse(verification_id=verification.id, uploads=uploads)
     except Exception as e:
         print("認証情報作成エラーが発生しました", e)
         # エラーが発生した場合は自動的にロールバックされるため、明示的なrollbackは不要
