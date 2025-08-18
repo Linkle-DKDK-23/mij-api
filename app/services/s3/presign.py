@@ -1,14 +1,24 @@
 # app/services/s3/presign.py
 from typing import Literal, Optional
-from .client import s3_client, VIDEO_BUCKET, IDENTITY_BUCKET, KMS_ALIAS_VIDEO, KMS_ALIAS_IDENTITY
+from .client import (
+    s3_client, 
+    VIDEO_BUCKET, 
+    IDENTITY_BUCKET, 
+    KMS_ALIAS_VIDEO, 
+    KMS_ALIAS_IDENTITY, 
+    ASSETS_BUCKET_NAME,
+    KMS_ALIAS_ACCOUNT
+)
 
-Resource = Literal["video", "identity"]
+Resource = Literal["video", "identity", "account"]
 
 def _bucket_and_kms(resource: Resource):
     if resource == "video":
         return VIDEO_BUCKET, KMS_ALIAS_VIDEO
     elif resource == "identity":
         return IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
+    elif resource == "account":
+        return ASSETS_BUCKET_NAME
     raise ValueError("unknown resource")
 
 def presign_put(
@@ -35,9 +45,17 @@ def presign_put(
         "Bucket": bucket,
         "Key": key,
         "ContentType": content_type,
-        "ServerSideEncryption": "aws:kms",
-        "SSEKMSKeyId": kms_alias,
     }
+    required_headers = {
+        "Content-Type": content_type,
+    }
+
+    # SSE-KMS を明示する場合（デフォルト暗号化を設定しているなら省略可）
+    params["ServerSideEncryption"] = "aws:kms"
+    params["SSEKMSKeyId"] = kms_alias
+    required_headers["x-amz-server-side-encryption"] = "aws:kms"
+    required_headers["x-amz-server-side-encryption-aws-kms-key-id"] = kms_alias
+
     url = client.generate_presigned_url(
         "put_object",
         Params=params,
@@ -47,11 +65,7 @@ def presign_put(
         "key": key,
         "upload_url": url,
         "expires_in": expires_in,
-        "required_headers": {
-            "Content-Type": content_type,
-            "x-amz-server-side-encryption": "aws:kms",
-            "x-amz-server-side-encryption-aws-kms-key-id": KMS_ALIAS_IDENTITY,
-        }
+        "required_headers": required_headers,
     }
 
 def presign_get(
@@ -79,6 +93,46 @@ def presign_get(
     )
     return {"download_url": url, "expires_in": expires_in}
 
+def presign_put_public(
+    resource: Resource,
+    key: str,
+    content_type: str,
+    expires_in: int = 300,
+) -> dict:
+    """
+    Public object upload (no KMS). Objects will be served via CloudFront OAC.
+    Make sure the S3 bucket has default encryption = SSE-S3 (AES256).
+    """
+    bucket = _bucket_and_kms(resource)
+    client = s3_client()
+
+    cache_control = "public, max-age=31536000, immutable"
+
+    params = {
+        "Bucket": bucket,
+        "Key": key,
+        "ContentType": content_type,
+        "CacheControl": cache_control,
+    }
+
+    required_headers = {
+        "Content-Type": content_type,
+        "Cache-Control": cache_control,
+    }
+
+    url = client.generate_presigned_url(
+        "put_object",
+        Params=params,
+        ExpiresIn=expires_in,
+        HttpMethod="PUT",
+    )
+
+    return {
+        "key": key,
+        "upload_url": url,
+        "expires_in": expires_in,
+        "required_headers": required_headers,
+    }
 
 def multipart_create(resource: Resource, key: str, content_type: str) -> dict:
     bucket, kms_alias = _bucket_and_kms(resource)

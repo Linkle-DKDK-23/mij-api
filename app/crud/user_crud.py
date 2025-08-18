@@ -82,3 +82,13 @@ def get_user_by_id(db: Session, user_id: str) -> Users:
         Users: ユーザー情報
     """
     return db.get(Users, user_id)
+
+def update_user(db: Session, user_id: str, slug: str) -> Users:
+    """
+    ユーザーを更新
+    """
+    user = get_user_by_id(db, user_id)
+    user.slug = slug
+    db.add(user)
+    db.flush()
+    return user
