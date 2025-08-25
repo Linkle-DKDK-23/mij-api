@@ -8,6 +8,11 @@ from app.constants.enums import (
     AccountType, 
     AccountStatus
 )
+from app.crud.profile_crud import get_profile_by_display_name
+from app.models.posts import Posts
+from app.models.plans import Plans
+from app.models.orders import Orders, OrderItems
+from app.constants.enums import PostStatus
 
 def create_user(db: Session, user_create: UserCreate) -> Users:
     """
@@ -93,21 +98,18 @@ def update_user(db: Session, user_id: str, slug: str) -> Users:
     db.flush()
     return user
 
-def get_user_profile_by_slug(db: Session, slug: str) -> dict:
+def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
     """
-    スラッグによるユーザープロフィール取得（関連データ含む）
+    ディスプレイネームによるユーザープロフィール取得（関連データ含む）
     """
-    from app.crud.profile_crud import get_profile_by_user_id
-    from app.models.posts import Posts
-    from app.models.plans import Plans
-    from app.models.orders import Orders, OrderItems
-    from app.constants.enums import PostStatus
     
-    user = db.query(Users).filter(Users.slug == slug).first()
-    if not user:
+    
+    profile = get_profile_by_display_name(db, display_name)
+
+    if not profile:
         return None
     
-    profile = get_profile_by_user_id(db, user.id)
+    user = get_user_by_id(db, profile.user_id)
     
     posts = db.query(Posts).filter(Posts.creator_user_id == user.id).filter(Posts.deleted_at.is_(None)).filter(Posts.status == PostStatus.APPROVED).all()
     

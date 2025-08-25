@@ -37,6 +37,8 @@ def get_account_info(
     try:
         profile = get_profile_by_user_id(db, current_user.id)
 
+        print("profile", profile)
+
         follower_data = get_follower_count(db, current_user.id)
         
         total_likes = get_total_likes_by_user_id(db, current_user.id)
@@ -65,6 +67,7 @@ def get_account_info(
             total_plan_price=plan_data["total_price"]
         )
     except Exception as e:
+        print("アカウント情報取得エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/update", response_model=AccountUpdateResponse)

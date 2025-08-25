@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.schemas.user import UserCreate, UserOut, UserProfileResponse
 from app.db.base import get_db
 from sqlalchemy.orm import Session
@@ -6,7 +6,7 @@ from app.crud.user_crud import (
     create_user,
     check_email_exists,
     check_slug_exists,
-    get_user_profile_by_slug
+    get_user_profile_by_display_name
 )
 from app.api.commons.utils import generate_code
 from app.deps.auth import get_current_user
@@ -59,16 +59,16 @@ def register_user(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/profile/{slug}", response_model=UserProfileResponse)
+@router.get("/profile", response_model=UserProfileResponse)
 def get_user_profile_by_slug_endpoint(
-    slug: str,
+    display_name: str = Query(..., description="ユーザー名"),
     db: Session = Depends(get_db)
 ):
     """
-    スラッグによるユーザープロフィール取得
+    ディスプレイネームによるユーザープロフィール取得
     """
     try:
-        profile_data = get_user_profile_by_slug(db, slug)
+        profile_data = get_user_profile_by_display_name(db, display_name)
         if not profile_data:
             raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
         
@@ -95,5 +95,6 @@ def get_user_profile_by_slug_endpoint(
             gacha_items=profile_data["gacha_items"]
         )
     except Exception as e:
+        print("ユーザープロフィール取得エラー: ", e)
         raise HTTPException(status_code=500, detail=str(e))
     
