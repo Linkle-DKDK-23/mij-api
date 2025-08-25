@@ -8,6 +8,11 @@ from app.constants.enums import (
     AccountType, 
     AccountStatus
 )
+from app.crud.profile_crud import get_profile_by_display_name
+from app.models.posts import Posts
+from app.models.plans import Plans
+from app.models.orders import Orders, OrderItems
+from app.constants.enums import PostStatus
 
 def create_user(db: Session, user_create: UserCreate) -> Users:
     """
@@ -92,3 +97,33 @@ def update_user(db: Session, user_id: str, slug: str) -> Users:
     db.add(user)
     db.flush()
     return user
+
+def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
+    """
+    ディスプレイネームによるユーザープロフィール取得（関連データ含む）
+    """
+    
+    
+    profile = get_profile_by_display_name(db, display_name)
+
+    if not profile:
+        return None
+    
+    user = get_user_by_id(db, profile.user_id)
+    
+    posts = db.query(Posts).filter(Posts.creator_user_id == user.id).filter(Posts.deleted_at.is_(None)).filter(Posts.status == PostStatus.APPROVED).all()
+    
+    plans = db.query(Plans).filter(Plans.creator_user_id == user.id).filter(Plans.deleted_at.is_(None)).all()
+    
+    individual_purchases = db.query(OrderItems).join(Orders).filter(Orders.user_id == user.id).filter(OrderItems.item_type == 1).all()
+    
+    gacha_items = db.query(OrderItems).join(Orders).filter(Orders.user_id == user.id).filter(OrderItems.item_type == 2).all()
+    
+    return {
+        "user": user,
+        "profile": profile,
+        "posts": posts,
+        "plans": plans,
+        "individual_purchases": individual_purchases,
+        "gacha_items": gacha_items
+    }

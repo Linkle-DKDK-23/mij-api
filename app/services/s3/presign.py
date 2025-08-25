@@ -2,19 +2,18 @@
 from typing import Literal, Optional
 from .client import (
     s3_client, 
-    VIDEO_BUCKET, 
-    IDENTITY_BUCKET, 
-    KMS_ALIAS_VIDEO, 
+    INGEST_BUCKET,
+    KMS_ALIAS_INGEST,
     KMS_ALIAS_IDENTITY, 
     ASSETS_BUCKET_NAME,
-    KMS_ALIAS_ACCOUNT
+    IDENTITY_BUCKET,
 )
 
 Resource = Literal["video", "identity", "account"]
 
 def _bucket_and_kms(resource: Resource):
     if resource == "video":
-        return VIDEO_BUCKET, KMS_ALIAS_VIDEO
+        return INGEST_BUCKET, KMS_ALIAS_INGEST
     elif resource == "identity":
         return IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
     elif resource == "account":

@@ -44,3 +44,9 @@ def account_asset_key(creator_id: str, kind: str, ext: str) -> str:
         str: アバターキー
     """
     return f"profiles/{creator_id}/{kind}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4()}.{ext}"
+
+def post_media_image_key(creator_id: str, kind: str, ext: str, post_id: str) -> str:
+    """
+    投稿メディア画像キー生成
+    """
+    return f"post-media/{creator_id}/{kind}/{post_id}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4()}.{ext}"

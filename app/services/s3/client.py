@@ -23,3 +23,6 @@ KMS_ALIAS_IDENTITY   = os.environ.get("KMS_ALIAS_KYC")
 # アカウント
 ASSETS_BUCKET_NAME = os.environ.get("ASSETS_BUCKET_NAME")
 KMS_ALIAS_ACCOUNT = os.environ.get("KMS_ALIAS_ASSET")
+
+INGEST_BUCKET = os.environ.get("INGEST_BUCKET_NAME") 
+KMS_ALIAS_INGEST   = os.environ.get("KMS_ALIAS_INGEST") 

@@ -23,6 +23,12 @@ def get_profile_by_user_id(db: Session, user_id: UUID) -> Profiles:
     """
     return db.query(Profiles).filter(Profiles.user_id == user_id).first()
 
+def get_profile_by_display_name(db: Session, display_name: str) -> Profiles:
+    """
+    ディスプレイネームに紐づくプロフィールを取得
+    """
+    return db.query(Profiles).filter(Profiles.display_name == display_name).first()
+
 def update_profile(db: Session, user_id: UUID, update_data: AccountUpdateRequest) -> Profiles:
     """
     プロフィールを更新
