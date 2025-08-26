@@ -8,7 +8,7 @@ from app.crud.plan_crud import create_plan, get_user_plans
 
 router = APIRouter()
 
-@router.post("/", response_model=PlanResponse)
+@router.post("/create", response_model=PlanResponse)
 def create_user_plan(
     plan_data: PlanCreateRequest,
     current_user: Users = Depends(get_current_user),
@@ -24,7 +24,7 @@ def create_user_plan(
         print("プラン作成エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/", response_model=PlanListResponse)
+@router.get("/list", response_model=PlanListResponse)
 def get_plans(
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
