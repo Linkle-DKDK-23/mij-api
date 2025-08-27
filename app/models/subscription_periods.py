@@ -22,4 +22,3 @@ class SubscriptionPeriods(Base):
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     invoice_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    subscription: Mapped["Subscriptions"] = relationship("Subscriptions", back_populates="periods")
