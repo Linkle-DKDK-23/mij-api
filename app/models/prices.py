@@ -17,10 +17,11 @@ class Prices(Base):
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     plan_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("plans.id", ondelete="CASCADE"), nullable=False)
+    status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     type: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     interval: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     currency: Mapped[str] = mapped_column(CHAR(3), nullable=False)
-    unit_amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    price: Mapped[int] = mapped_column(BigInteger, nullable=False)
     external_price_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 

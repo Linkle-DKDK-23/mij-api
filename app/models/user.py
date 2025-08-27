@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from .orders import Orders
     from .creator_type import CreatorType
     from .gender import Gender
+    from .post_moderation_events import PostModerationEvents
+    from .purchases import Purchases
 
 class Users(Base):
     __tablename__ = "users"
@@ -41,3 +43,5 @@ class Users(Base):
     orders: Mapped[List["Orders"]] = relationship("Orders", back_populates="user")
     creator_type: Mapped[List["CreatorType"]] = relationship("CreatorType", back_populates="user", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin")
     genders: Mapped[List["Gender"]] = relationship("Gender", secondary="creator_type", viewonly=True, lazy="selectin")
+    moderation_events: Mapped[List["PostModerationEvents"]] = relationship("PostModerationEvents", back_populates="acted_by")
+    pure_purchases: Mapped[List["Purchases"]] = relationship("Purchases", back_populates="user")

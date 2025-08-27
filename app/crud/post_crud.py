@@ -4,6 +4,7 @@ from app.models.posts import Posts
 from app.models.social import Likes
 from uuid import UUID
 from app.constants.enums import PostStatus
+from app.schemas.post import PostCreateRequest
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
@@ -48,3 +49,12 @@ def get_posts_count_by_user_id(db: Session, user_id: UUID) -> dict:
         "deleted_posts_count": deleted_posts_count,
         "approved_posts_count": approved_posts_count
     }
+
+def create_post(db: Session, post_data: dict):
+    """
+    投稿を作成
+    """
+    post = Posts(**post_data)
+    db.add(post)
+    db.flush()
+    return post

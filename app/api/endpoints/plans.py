@@ -5,7 +5,8 @@ from app.deps.auth import get_current_user
 from app.models.user import Users
 from app.schemas.plan import PlanCreateRequest, PlanResponse, PlanListResponse
 from app.crud.plan_crud import create_plan, get_user_plans
-
+from app.constants.enums import PlanStatus, PriceType
+from app.crud.price_crud import create_price
 router = APIRouter()
 
 @router.post("/create", response_model=PlanResponse)
@@ -18,8 +19,38 @@ def create_user_plan(
     プランを作成
     """
     try:
-        plan = create_plan(db, current_user.id, plan_data)
-        return plan
+
+        # プランを登録
+        plan_create_data = {
+            "creator_user_id": current_user.id,
+            "name": plan_data.name,
+            "description": plan_data.description,
+            "type": PlanStatus.PLAN,
+        }   
+        plan = create_plan(db, plan_create_data)
+
+        # 価格を登録
+        price_create_data = {
+            "plan_id": plan.id,
+            "type": PriceType.PLAN,
+            "currency": "JPY",
+            "price": plan_data.price,
+        }
+        price = create_price(db, price_create_data)
+
+        db.commit()
+        db.refresh(plan)
+        db.refresh(price)
+
+        # 返却用に整形
+        plan_response = PlanResponse(
+            id=plan.id,
+            name=plan.name,
+            description=plan.description,
+            price=price.price,
+        )
+
+        return plan_response
     except Exception as e:
         print("プラン作成エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -34,6 +65,7 @@ def get_plans(
     """
     try:
         plans = get_user_plans(db, current_user.id)
+
         return PlanListResponse(plans=plans)
     except Exception as e:
         print("プラン取得エラーが発生しました", e)
