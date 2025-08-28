@@ -11,6 +11,8 @@ from app.crud.user_crud import (
 from app.api.commons.utils import generate_code
 from app.deps.auth import get_current_user
 from app.crud.profile_crud import create_profile
+from app.schemas.user import ProfilePostResponse, ProfilePlanResponse, ProfilePurchaseResponse, ProfileGachaResponse
+from app.models.posts import Posts
 router = APIRouter()
 
 @router.post("/register", response_model=UserOut)
@@ -79,6 +81,55 @@ def get_user_profile_by_slug_endpoint(
         if profile and profile.links and isinstance(profile.links, dict):
             website_url = profile.links.get("website")
         
+        # モデルオブジェクトをスキーマオブジェクトに変換
+        profile_posts = []
+        for post in profile_data["posts"]:
+            profile_posts.append(ProfilePostResponse(
+                id=post.id,
+                title=post.title,
+                thumbnail_storage_key=post.thumbnail_storage_key,
+                video_duration=post.video_duration,
+                created_at=post.created_at
+            ))
+        
+        profile_plans = []
+        for plan in profile_data["plans"]:
+            profile_plans.append(ProfilePlanResponse(
+                id=plan.id,
+                name=plan.name,
+                description=plan.description
+            ))
+        
+        profile_purchases = []
+        for purchase in profile_data["individual_purchases"]:
+            # 投稿情報を取得
+            post = None
+            if purchase.post_id:
+                post_obj = db.query(Posts).filter(Posts.id == purchase.post_id).first()
+                if post_obj:
+                    post = ProfilePostResponse(
+                        id=post_obj.id,
+                        title=post_obj.title,
+                        thumbnail_storage_key=post_obj.thumbnail_storage_key,
+                        video_duration=post_obj.video_duration,
+                        created_at=post_obj.created_at
+                    )
+            
+            profile_purchases.append(ProfilePurchaseResponse(
+                id=purchase.id,
+                amount=purchase.amount,
+                created_at=purchase.order.created_at,  # Ordersテーブルのcreated_atを使用
+                post=post
+            ))
+        
+        profile_gacha_items = []
+        for gacha_item in profile_data["gacha_items"]:
+            profile_gacha_items.append(ProfileGachaResponse(
+                id=gacha_item.id,
+                amount=gacha_item.amount,
+                created_at=gacha_item.order.created_at  # Ordersテーブルのcreated_atを使用
+            ))
+        
         return UserProfileResponse(
             id=user.id,
             slug=user.slug,
@@ -89,10 +140,10 @@ def get_user_profile_by_slug_endpoint(
             website_url=website_url,
             post_count=len(profile_data["posts"]),
             follower_count=0,
-            posts=profile_data["posts"],
-            plans=profile_data["plans"],
-            individual_purchases=profile_data["individual_purchases"],
-            gacha_items=profile_data["gacha_items"]
+            posts=profile_posts,
+            plans=profile_plans,
+            individual_purchases=profile_purchases,
+            gacha_items=profile_gacha_items
         )
     except Exception as e:
         print("ユーザープロフィール取得エラー: ", e)

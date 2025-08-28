@@ -9,14 +9,14 @@ from .client import (
     IDENTITY_BUCKET,
 )
 
-Resource = Literal["video", "identity", "account"]
+Resource = Literal["video", "identity", "public"]
 
 def _bucket_and_kms(resource: Resource):
     if resource == "video":
         return INGEST_BUCKET, KMS_ALIAS_INGEST
     elif resource == "identity":
         return IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
-    elif resource == "account":
+    elif resource == "public":
         return ASSETS_BUCKET_NAME
     raise ValueError("unknown resource")
 
@@ -59,6 +59,7 @@ def presign_put(
         "put_object",
         Params=params,
         ExpiresIn=expires_in,
+        HttpMethod="PUT",
     )
     return {
         "key": key,

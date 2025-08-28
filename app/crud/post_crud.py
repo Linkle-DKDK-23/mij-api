@@ -1,8 +1,10 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.posts import Posts
 from app.models.social import Likes
 from uuid import UUID
+from datetime import datetime
 from app.constants.enums import PostStatus
 from app.schemas.post import PostCreateRequest
 
@@ -55,6 +57,26 @@ def create_post(db: Session, post_data: dict):
     投稿を作成
     """
     post = Posts(**post_data)
+    db.add(post)
+    db.flush()
+    return post
+
+def update_post_media_assets(db: Session, post_id: UUID, key: str, kind: str):
+    """
+    投稿のメディアアセットを更新
+    """
+    post = db.query(Posts).filter(Posts.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if kind == "ogp":
+        post.ogp_storage_key = key
+    elif kind == "thumbnail":
+        post.thumbnail_storage_key = key
+    elif kind == "main":
+        post.video_storage_key = key
+    elif kind == "sample":
+        post.sample_video_storage_key = key
+    post.updated_at = datetime.now()
     db.add(post)
     db.flush()
     return post

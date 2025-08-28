@@ -140,7 +140,7 @@ def presign_upload(
         for f in request.files:
             key = account_asset_key(str(user.id), f.kind, f.ext)
 
-            response = presign_put_public("account", key, f.content_type)
+            response = presign_put_public("public", key, f.content_type)
             
             uploads[f.kind] = PresignResponseItem(
                 key=response["key"],

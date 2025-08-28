@@ -45,8 +45,15 @@ def account_asset_key(creator_id: str, kind: str, ext: str) -> str:
     """
     return f"profiles/{creator_id}/{kind}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4()}.{ext}"
 
-def post_media_image_key(creator_id: str, kind: str, ext: str, post_id: str) -> str:
+def post_media_image_key(kind: str, creator_id: str, post_id: str, ext: str) -> str:
     """
     投稿メディア画像キー生成
     """
-    return f"post-media/{creator_id}/{kind}/{post_id}/{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4()}.{ext}"
+    return f"post-media/{kind}/{creator_id}/{post_id}/{uuid.uuid4()}.{ext}"
+
+
+def post_media_video_key(creator_id: str, post_id: str, ext: str, kind: str) -> str:
+    """
+    投稿メディアビデオキー生成
+    """
+    return f"post-media/{kind}/{creator_id}/{post_id}/{uuid.uuid4()}.{ext}"
