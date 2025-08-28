@@ -9,6 +9,7 @@ def s3_client():
     return boto3.client(
         "s3",
         region_name=AWS_REGION,
+        endpoint_url=f"https://s3.{AWS_REGION}.amazonaws.com",
         config=Config(signature_version="s3v4")
     )
 
@@ -24,5 +25,6 @@ KMS_ALIAS_IDENTITY   = os.environ.get("KMS_ALIAS_KYC")
 ASSETS_BUCKET_NAME = os.environ.get("ASSETS_BUCKET_NAME")
 KMS_ALIAS_ACCOUNT = os.environ.get("KMS_ALIAS_ASSET")
 
+# ビデオバケット
 INGEST_BUCKET = os.environ.get("INGEST_BUCKET_NAME") 
 KMS_ALIAS_INGEST   = os.environ.get("KMS_ALIAS_INGEST") 
