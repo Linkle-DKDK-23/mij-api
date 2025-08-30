@@ -3,7 +3,7 @@ from typing import Literal, List
 from app.schemas.commons import PresignResponseItem
 from uuid import UUID
 
-ImageKind = Literal["ogp", "thumbnail"]
+ImageKind = Literal["ogp", "thumbnail", "images"]
 VideoKind = Literal["main", "sample"]
 
 class PostMediaImageFileSpec(BaseModel):
