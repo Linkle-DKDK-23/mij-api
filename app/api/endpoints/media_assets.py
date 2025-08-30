@@ -43,7 +43,7 @@ async def presign_post_media_image(
         for f in request.files:
             if f.kind not in allowed_kinds:
                 raise HTTPException(400, f"unsupported kind: {f.kind}")
-            if f.kind in seen:
+            if f.kind != "images" and f.kind in seen:
                 raise HTTPException(400, f"duplicated kind: {f.kind}")
             seen.add(f.kind)
 
@@ -57,12 +57,22 @@ async def presign_post_media_image(
             else:
                 response = presign_put_public("public", key, f.content_type)
 
-            uploads[f.kind] = PresignResponseItem(
-                key=response["key"],
-                upload_url=response["upload_url"],
-                expires_in=response["expires_in"],
-                required_headers=response["required_headers"]
-            )
+            if f.kind == "images":
+                if f.kind not in uploads:
+                    uploads[f.kind] = []
+                uploads[f.kind].append(PresignResponseItem(
+                    key=response["key"],
+                    upload_url=response["upload_url"],
+                    expires_in=response["expires_in"],
+                    required_headers=response["required_headers"]
+                ))
+            else:
+                uploads[f.kind] = PresignResponseItem(
+                    key=response["key"],
+                    upload_url=response["upload_url"],
+                    expires_in=response["expires_in"],
+                    required_headers=response["required_headers"]
+                )
             post = update_post_media_assets(db, f.post_id, key, f.kind)
 
         db.commit()
@@ -88,7 +98,7 @@ async def presign_post_media_video(
         for f in request.files:
             if f.kind not in allowed_kinds:
                 raise HTTPException(400, f"unsupported kind: {f.kind}")
-            if f.kind in seen:
+            if f.kind != "images" and f.kind in seen:
                 raise HTTPException(400, f"duplicated kind: {f.kind}")
             seen.add(f.kind)
 
