@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal, List
+from typing import Literal, List, Union
 from app.schemas.commons import PresignResponseItem
 from uuid import UUID
 
@@ -25,7 +25,7 @@ class PostMediaVideoPresignRequest(BaseModel):
     files: List[PostMediaVideoFileSpec] = Field(..., description='例: [{"kind":"main","ext":"mp4"}, ...]')
 
 class PostMediaImagePresignResponse(BaseModel):
-    uploads: dict[str, PresignResponseItem]
+    uploads: dict[str, Union[PresignResponseItem, List[PresignResponseItem]]]
 
 class PostMediaVideoPresignResponse(BaseModel):
     uploads: dict[str, PresignResponseItem]

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
@@ -11,6 +11,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from .media_rendition_jobs import MediaRenditionJobs
     from .media_assets import MediaAssets
 
 class MediaRenditions(Base):
@@ -28,6 +29,4 @@ class MediaRenditions(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     asset: Mapped["MediaAssets"] = relationship("MediaAssets", back_populates="renditions")
-
-if TYPE_CHECKING:
-    from .media_assets import MediaAssets
+    jobs: Mapped[List["MediaRenditionJobs"]] = relationship("MediaRenditionJobs", back_populates="rendition", foreign_keys="MediaRenditionJobs.rendition_id")

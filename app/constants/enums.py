@@ -86,3 +86,72 @@ class PriceType:
     SINGLE = 1
     # プラン
     PLAN = 2
+
+# メディアアセットのkind
+class MediaAssetKind:
+    # OGP画像
+    OGP = 1
+    # サムネイル画像
+    THUMBNAIL = 2
+    # 画像（複数）
+    IMAGES = 3
+    # メインビデオ
+    MAIN_VIDEO = 4
+    # サンプルビデオ
+    SAMPLE_VIDEO = 5
+
+
+class RenditionKind:
+    # プレビュービデオ
+    PREVIEW_MP4 = 1
+    # HLS_ABR4
+    HLS_ABR4 = 2
+
+class RenditionBackend:
+    # MediaConvert
+    MEDIACONVERT = 1
+    # Fargate FFmpeg
+    FARGATE_FFMPEG = 2
+
+class RenditionJobStatus:
+    # 未実行
+    PENDING = 1
+    # 実行中
+    SUBMITTED = 2
+    # 進行中
+    PROGRESSING = 3
+    # 完了
+    COMPLETE = 4
+    # エラー
+    ERROR = 9
+
+class MediaRenditionJobKind:
+    # プレビュービデオ
+    PREVIEW_MP4 = 1
+    # HLS_ABR4
+    HLS_ABR4 = 2
+
+class MediaRenditionJobBackend:
+    # MediaConvert
+    MEDIACONVERT = 1
+    # Fargate FFmpeg
+    FARGATE_FFMPEG = 2
+
+class MediaRenditionJobStatus:
+    # 未実行
+    PENDING = 1
+    # 実行中
+    SUBMITTED = 2
+    # 進行中
+    PROGRESSING = 3
+    # 完了
+    COMPLETE = 4
+    # エラー
+    FAILED = 5
+
+class MediaRenditionKind:
+    HLS_MASTER = 10
+    HLS_VARIANT_360P  = 11
+    HLS_VARIANT_480P  = 12
+    HLS_VARIANT_720P  = 13
+    HLS_VARIANT_1080P = 14

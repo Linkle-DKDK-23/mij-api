@@ -5,7 +5,7 @@ from app.models.posts import Posts
 from app.models.social import Likes
 from uuid import UUID
 from datetime import datetime
-from app.constants.enums import PostStatus
+from app.constants.enums import PostStatus, MediaAssetKind
 from app.schemas.post import PostCreateRequest
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
@@ -68,6 +68,20 @@ def update_post_media_assets(db: Session, post_id: UUID, key: str, kind: str):
     post = db.query(Posts).filter(Posts.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    
+    # kindを整数値にマッピング
+    kind_mapping = {
+        "ogp": MediaAssetKind.OGP,
+        "thumbnail": MediaAssetKind.THUMBNAIL,
+        "main": MediaAssetKind.MAIN_VIDEO,
+        "sample": MediaAssetKind.SAMPLE_VIDEO,
+        "images": MediaAssetKind.IMAGES,
+    }
+    
+    kind_int = kind_mapping.get(kind)
+    if kind_int is None:
+        raise HTTPException(status_code=400, detail=f"Unsupported kind: {kind}")
+    
     if kind == "ogp":
         post.ogp_storage_key = key
     elif kind == "thumbnail":
@@ -76,6 +90,11 @@ def update_post_media_assets(db: Session, post_id: UUID, key: str, kind: str):
         post.video_storage_key = key
     elif kind == "sample":
         post.sample_video_storage_key = key
+    elif kind == "images":
+        # images kindの場合は、既存のimages_storage_keyフィールドがないため、
+        # 一時的にthumbnail_storage_keyに保存するか、別の方法を検討
+        # 現在は何もしない（必要に応じてMediaAssetsテーブルを使用）
+        pass
     post.updated_at = datetime.now()
     db.add(post)
     db.flush()

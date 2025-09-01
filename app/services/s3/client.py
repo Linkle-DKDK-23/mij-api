@@ -1,5 +1,6 @@
 # app/services/s3/client.py
 import os
+from functools import lru_cache
 import boto3
 from botocore.config import Config
 
@@ -13,6 +14,11 @@ def s3_client():
         config=Config(signature_version="s3v4")
     )
 
+@lru_cache(maxsize=1)
+def s3_client_for_mc():
+    base = boto3.client("mediaconvert", region_name=AWS_REGION)
+    ep = base.describe_endpoints(MaxResults=1)["Endpoints"][0]["Url"]
+    return boto3.client("mediaconvert", region_name=AWS_REGION, endpoint_url=ep)
 # ビデオ
 VIDEO_BUCKET = os.environ.get("S3_BUCKET_NAME") 
 IDENTITY_BUCKET   = os.environ.get("KYC_BUCKET_NAME") 
@@ -28,3 +34,10 @@ KMS_ALIAS_ACCOUNT = os.environ.get("KMS_ALIAS_ASSET")
 # ビデオバケット
 INGEST_BUCKET = os.environ.get("INGEST_BUCKET_NAME") 
 KMS_ALIAS_INGEST   = os.environ.get("KMS_ALIAS_INGEST") 
+
+# メディアコンバート
+MEDIA_BUCKET_NAME = os.environ.get("MEDIA_BUCKET_NAME")
+KMS_ALIAS_MEDIA = os.environ.get("KMS_ALIAS_MEDIA")
+
+MEDIACONVERT_ROLE_ARN = os.environ.get("MEDIACONVERT_ROLE_ARN")
+OUTPUT_KMS_ARN = os.environ.get("OUTPUT_KMS_ARN")

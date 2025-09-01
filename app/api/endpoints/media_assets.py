@@ -13,10 +13,21 @@ from app.deps.auth import get_current_user
 from app.db.base import get_db
 from app.services.s3.keygen import post_media_image_key, post_media_video_key
 from app.schemas.commons import PresignResponseItem, UploadItem
-from typing import Dict
-from app.crud.post_crud import update_post_media_assets
+from typing import Dict, List, Union
+from app.crud.media_assets import create_media_asset
+from app.models.posts import Posts
+from app.constants.enums import MediaAssetKind
 
 router = APIRouter()
+
+# 文字列kindから整数kindへのマッピング
+KIND_MAPPING = {
+    "ogp": MediaAssetKind.OGP,
+    "thumbnail": MediaAssetKind.THUMBNAIL,
+    "images": MediaAssetKind.IMAGES,
+    "main": MediaAssetKind.MAIN_VIDEO,
+    "sample": MediaAssetKind.SAMPLE_VIDEO,
+}
 
 @router.post("/")
 async def presign_post_media_video(
@@ -47,7 +58,8 @@ async def presign_post_media_image(
                 raise HTTPException(400, f"duplicated kind: {f.kind}")
             seen.add(f.kind)
 
-        uploads: Dict[ImageKind, UploadItem] = {}
+        uploads: Dict[ImageKind, Union[PresignResponseItem, List[PresignResponseItem]]] = {}
+        updated_posts = set()  # 更新された投稿IDを保存
 
         for f in request.files:
             key = post_media_image_key(f.kind, str(user.id), str(f.post_id), f.ext)
@@ -73,11 +85,26 @@ async def presign_post_media_image(
                     expires_in=response["expires_in"],
                     required_headers=response["required_headers"]
                 )
-            post = update_post_media_assets(db, f.post_id, key, f.kind)
+            
+            # メディアアセット作成
+            media_asset_data = {
+                "post_id": f.post_id,
+                "kind": KIND_MAPPING[f.kind],
+                "storage_key": key,
+                "mime_type": f.content_type,
+                "bytes": 0,
+            }
+            media_asset = create_media_asset(db, media_asset_data)
+            updated_posts.add(f.post_id)
 
         db.commit()
-        db.refresh(post)
         
+        # 更新された投稿をrefresh
+        for post_id in updated_posts:
+            post = db.query(Posts).filter(Posts.id == post_id).first()
+            if post:
+                db.refresh(post)
+                db.refresh(media_asset)
 
         return PostMediaImagePresignResponse(uploads=uploads)
     except Exception as e:
@@ -115,10 +142,17 @@ async def presign_post_media_video(
                 expires_in=response["expires_in"],
                 required_headers=response["required_headers"]
             )
-            post = update_post_media_assets(db, f.post_id, key, f.kind)
+            media_asset_data = {
+                "post_id": f.post_id,
+                "kind": KIND_MAPPING[f.kind],
+                "storage_key": key,
+                "mime_type": f.content_type,
+                "bytes": 0,
+            }
+            media_asset = create_media_asset(db, media_asset_data)
 
         db.commit()
-        db.refresh(post)
+        db.refresh(media_asset)
 
         return PostMediaVideoPresignResponse(uploads=uploads)
     except Exception as e:

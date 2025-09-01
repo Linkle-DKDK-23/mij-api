@@ -26,6 +26,7 @@ from .creator_type import CreatorType
 from .gender import Gender
 from .purchases import Purchases
 from .post_moderation_events import PostModerationEvents
+from .media_rendition_jobs import MediaRenditionJobs
 
 __all__ = [
     "Users", "Profiles", "Creators", "Genres", "Categories", "Posts", "PostCategories",
@@ -34,5 +35,5 @@ __all__ = [
     "Bookmarks", "Notifications", "IdentityVerifications", "IdentityDocuments",
     "Reports", "AuditLogs", "PayoutAccounts", "Payouts", "PayoutItems",
     "CreatorBalances", "Tags", "PostTags", "I18nLanguages", "I18nTexts",
-    "CreatorType", "Gender", "Purchases", "PostModerationEvents"
+    "CreatorType", "Gender", "Purchases", "PostModerationEvents", "MediaRenditionJobs"
 ]
