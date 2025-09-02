@@ -52,3 +52,9 @@ def get_media_asset_by_post_id(db: Session, post_id: str) -> MediaAssets:
     ).all()
     
     return result
+
+def get_media_asset_by_id(db: Session, asset_id: str) -> MediaAssets:
+    """
+    メディアアセット取得
+    """
+    return db.query(MediaAssets).filter(MediaAssets.id == asset_id).first()

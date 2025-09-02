@@ -14,7 +14,7 @@ from app.db.base import get_db
 from app.services.s3.keygen import post_media_image_key, post_media_video_key
 from app.schemas.commons import PresignResponseItem, UploadItem
 from typing import Dict, List, Union
-from app.crud.media_assets import create_media_asset
+from app.crud.media_assets_crud import create_media_asset
 from app.models.posts import Posts
 from app.constants.enums import MediaAssetKind
 

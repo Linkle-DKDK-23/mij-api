@@ -89,7 +89,7 @@ def transcode_mc_key(creator_id: str, post_id: str, asset_id: str) -> str:
     Returns:
         str: メディアコンバートキー
     """
-    return f"transcode-mc/{creator_id}/{post_id}/{asset_id}/preview/preview.mp4"
+    return f"transcode-mc/{creator_id}/{post_id}/{asset_id}/preview/"
 
 
 def transcode_mc_hls_prefix(creator_id: str, post_id: str, asset_id: str) -> str:

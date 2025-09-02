@@ -99,3 +99,17 @@ def update_post_media_assets(db: Session, post_id: UUID, key: str, kind: str):
     db.add(post)
     db.flush()
     return post
+
+def update_post_status(db: Session, post_id: UUID, status: int):
+    """
+    投稿のステータスを更新
+    """
+    post = db.query(Posts).filter(Posts.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    post.status = status
+    post.updated_at = datetime.now()
+    db.add(post)
+    db.flush()
+    return post

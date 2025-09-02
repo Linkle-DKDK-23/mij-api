@@ -10,7 +10,7 @@ from app.services.s3.client import (
 )
 
 
-def build_media_rendition_job_settings(input_key: str, output_key: str, usermeta: dict):
+def build_media_rendition_job_settings(input_key: str, output_prefix: str, usermeta: dict):
     """
     メディアレンディションジョブ作成
 
@@ -25,12 +25,7 @@ def build_media_rendition_job_settings(input_key: str, output_key: str, usermeta
     input_s3 = f"s3://{INGEST_BUCKET}/{input_key}"
 
     # 出力ディレクトリ（末尾に / が必要）
-    out_dir = f"s3://{MEDIA_BUCKET_NAME}/{output_key.rsplit('/', 1)[0]}/"
-
-    # 「ファイル名そのもの」を指定することはできないので、
-    # 入力名の末尾に付ける NameModifier で擬似的に制御
-    # ここでは常に "_preview" を付与（例：sample_preview.mp4）
-    name_modifier = "_preview"
+    out_dir = f"s3://{MEDIA_BUCKET_NAME}/{output_prefix.rsplit('/', 1)[0]}/"
 
     
     return {
@@ -74,7 +69,6 @@ def build_media_rendition_job_settings(input_key: str, output_key: str, usermeta
                             "Bitrate": 96_000, "CodingMode": "CODING_MODE_2_0", "SampleRate": 48_000
                         }}
                     }],
-                    "NameModifier": name_modifier,
                 }],
             }],
         },
@@ -163,9 +157,14 @@ def build_hls_abr4_settings(input_key: str, output_prefix: str, usermeta: dict):
         dict: ジョブ設定
     """
     input_s3 = f"s3://{INGEST_BUCKET}/{input_key}"
-    dest     = f"s3://{MEDIA_BUCKET_NAME}/{output_prefix.strip('/')}/"  # ★ 末尾 / を必ず付与
+    dest     = f"s3://{MEDIA_BUCKET_NAME}/{output_prefix.strip('/')}/"
 
-    def stream(h, w, max_br, a_br, name, profile="HIGH"):
+    file_prefix = usermeta.get("renditionJobId")
+
+    def profile_for(h: int) -> str:
+        return "HIGH" if h >= 1080 else "MAIN"
+
+    def stream(h, w, max_br, a_br, name_suffix):
         return {
             "VideoDescription": {
                 "Height": h, "Width": w,
@@ -184,28 +183,26 @@ def build_hls_abr4_settings(input_key: str, output_prefix: str, usermeta: dict):
                         "FramerateControl": "INITIALIZE_FROM_SOURCE",
                         "ParControl": "INITIALIZE_FROM_SOURCE",
                         "Syntax": "DEFAULT",
-                        "Level": "LEVEL_AUTO",
-                        "Profile": profile
+                        "CodecLevel": "AUTO",
+                        "CodecProfile": profile_for(h),
                     }
                 }
             },
             "AudioDescriptions": [{
+                "AudioSourceName": "Audio Selector 1",
                 "CodecSettings": {
                     "Codec": "AAC",
-                    "AacSettings": {
-                        "Bitrate": a_br,
-                        "CodingMode": "CODING_MODE_2_0",
-                        "SampleRate": 48000
-                    }
+                    "AacSettings": {"Bitrate": a_br, "CodingMode": "CODING_MODE_2_0", "SampleRate": 48000}
                 },
-                # 音量のばらつき抑制（お好みで）
-                "AudioNormalizationSettings": {
-                    "Algorithm": "ITU_BS_1770_4",
-                    "AlgorithmControl": "CORRECT_AUDIO"
-                }
+                "AudioNormalizationSettings": {"Algorithm": "ITU_BS_1770_4", "AlgorithmControl": "CORRECT_AUDIO"}
             }],
             "ContainerSettings": {"Container": "M3U8"},
-            "NameModifier": name
+            "NameModifier": name_suffix,           # 例: "_360p"
+            "OutputSettings": {
+                "HlsSettings": {
+                    "SegmentModifier": f"{file_prefix}_"
+                }
+            }
         }
 
     return {
@@ -231,8 +228,6 @@ def build_hls_abr4_settings(input_key: str, output_prefix: str, usermeta: dict):
                         "OutputSelection": "MANIFESTS_AND_SEGMENTS",
                         "SegmentControl": "SEGMENTED_FILES",
                         "CodecSpecification": "RFC_6381",
-                        # （任意）マニフェスト圧縮
-                        # "ManifestCompression": "GZIP",
                         "DestinationSettings": {
                             "S3Settings": {
                                 "Encryption": {
@@ -244,13 +239,9 @@ def build_hls_abr4_settings(input_key: str, output_prefix: str, usermeta: dict):
                     }
                 },
                 "Outputs": [
-                    # 360p 16:9
                     stream(360,   640,   800_000,   96_000, "_360p"),
-                    # 480p
                     stream(480,   854, 1_200_000,   96_000, "_480p"),
-                    # 720p
                     stream(720,  1280, 2_500_000,  128_000, "_720p"),
-                    # 1080p（HIGH プロファイル指定のまま）
                     stream(1080, 1920, 4_500_000,  128_000, "_1080p"),
                 ]
             }]

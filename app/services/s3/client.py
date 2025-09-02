@@ -19,6 +19,10 @@ def s3_client_for_mc():
     base = boto3.client("mediaconvert", region_name=AWS_REGION)
     ep = base.describe_endpoints(MaxResults=1)["Endpoints"][0]["Url"]
     return boto3.client("mediaconvert", region_name=AWS_REGION, endpoint_url=ep)
+
+# 環境セット
+ENV = os.environ.get("ENV")
+
 # ビデオ
 VIDEO_BUCKET = os.environ.get("S3_BUCKET_NAME") 
 IDENTITY_BUCKET   = os.environ.get("KYC_BUCKET_NAME") 

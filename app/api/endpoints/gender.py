@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.schemas.gender import GenderOut
 from typing import List
-from app.crud.gender import get_genders
+from app.crud.gender_crud import get_genders
 
 router = APIRouter()
 

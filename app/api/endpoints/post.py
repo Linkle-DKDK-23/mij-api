@@ -8,10 +8,10 @@ from app.crud.post_crud import create_post
 from app.crud.plan_crud import create_plan
 from app.crud.price_crud import create_price
 from app.constants.enums import PlanStatus, PriceType
-from app.crud.post_plans import create_post_plan
+from app.crud.post_plans_crud import create_post_plan
 from app.crud.tags_crud import exit_tag, create_tag
 from app.crud.post_tags_crud import create_post_tag
-from app.crud.post_categories import create_post_category
+from app.crud.post_categories_crud import create_post_category
 from app.models.tags import Tags
 
 router = APIRouter()

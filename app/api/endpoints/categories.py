@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.schemas.categories import CategoryOut, GenreOut
-from app.crud.categories import get_categories, get_genres, get_recommended_categories, get_recently_used_categories
+from app.crud.categories_crud import get_categories, get_genres, get_recommended_categories, get_recently_used_categories
 from app.deps.auth import get_current_user
 from typing import List
 

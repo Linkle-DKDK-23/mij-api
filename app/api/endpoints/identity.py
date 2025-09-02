@@ -15,7 +15,7 @@ from app.services.s3.keygen import identity_key
 from app.services.s3.presign import presign_put
 from app.deps.auth import get_current_user
 from app.constants.enums import IdentityStatus, IdentityKind
-from app.crud.identity import create_identity_verification, create_identity_document, update_identity_verification
+from app.crud.identity_crud import create_identity_verification, create_identity_document, update_identity_verification
 from app.db.base import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone

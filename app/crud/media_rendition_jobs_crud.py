@@ -27,3 +27,9 @@ def update_media_rendition_job(db: Session, media_rendition_job_id: str, media_r
     db.add(db_media_rendition_job)
     db.flush()
     return db_media_rendition_job
+    
+def get_media_rendition_job_by_id(db: Session, media_rendition_job_id: str) -> MediaRenditionJobs:
+    """
+    メディアレンディションジョブ取得
+    """
+    return db.query(MediaRenditionJobs).filter(MediaRenditionJobs.id == media_rendition_job_id).first()
