@@ -17,9 +17,6 @@ class UserOut(BaseModel):
 
 class ProfilePostResponse(BaseModel):
     id: UUID
-    title: str
-    thumbnail_storage_key: Optional[str] = None
-    video_duration: Optional[int] = None
     created_at: datetime
 
 class ProfilePlanResponse(BaseModel):

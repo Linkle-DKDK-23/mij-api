@@ -105,3 +105,19 @@ def transcode_mc_hls_prefix(creator_id: str, post_id: str, asset_id: str) -> str
         str: HLS 出力のプレフィックス
     """
     return f"transcode-mc/{creator_id}/{post_id}/{asset_id}/hls/"
+
+
+def transcode_mc_ffmpeg_key(creator_id: str, post_id: str, ext: str) -> str:
+    """
+    メディアコンバートキー生成
+
+    Args:
+        creator_id: str クリエイターID
+        post_id: str 投稿ID
+        asset_id: str アセットID
+        ext: str 拡張子
+
+    Returns:
+        str: メディアコンバートキー
+    """
+    return f"transcode-mc/{creator_id}/{post_id}/ffmpeg/{uuid.uuid4()}.{ext}"

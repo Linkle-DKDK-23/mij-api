@@ -34,3 +34,5 @@ class PostRequest(BaseModel):
     title: str
     category_ids: List[str]
     
+class PoseMediaCovertRequest(BaseModel):
+    post_id: UUID

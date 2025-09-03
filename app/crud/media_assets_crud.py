@@ -21,7 +21,7 @@ def create_media_asset(db: Session, media_asset_data: dict) -> MediaAssets:
     return db_media_asset
 
 
-def get_media_asset_by_post_id(db: Session, post_id: str) -> MediaAssets:
+def get_media_asset_by_post_id(db: Session, post_id: str, type: str) -> MediaAssets:
     """
     メディアアセット取得（postテーブルとJOINしてユーザーIDも取得）
 
@@ -32,6 +32,17 @@ def get_media_asset_by_post_id(db: Session, post_id: str) -> MediaAssets:
     Returns:
         MediaAssets: メディアアセット（post情報も含む）
     """
+
+    if type == "video":
+        kind = [
+            MediaAssetKind.MAIN_VIDEO, 
+            MediaAssetKind.SAMPLE_VIDEO, 
+        ]
+    else:
+        kind = [
+            MediaAssetKind.IMAGES, 
+        ]
+
     result = db.execute(
         select(
             MediaAssets.id,
@@ -39,15 +50,13 @@ def get_media_asset_by_post_id(db: Session, post_id: str) -> MediaAssets:
             MediaAssets.kind,
             MediaAssets.created_at,
             MediaAssets.storage_key,
+            MediaAssets.mime_type,
             Posts.creator_user_id
         ).join(
             Posts, MediaAssets.post_id == Posts.id
         ).where(
             MediaAssets.post_id == post_id, 
-            MediaAssets.kind.in_([
-                MediaAssetKind.MAIN_VIDEO, 
-                MediaAssetKind.SAMPLE_VIDEO, 
-            ])
+            MediaAssets.kind.in_(kind)
         )
     ).all()
     
