@@ -12,7 +12,9 @@ from app.api.endpoints import (
     plans,
     categories,
     post,
+    transcode_mc,
 )
+from app.api.hook.webhooks import router as webhooks_router
 
 api_router = APIRouter()
 
@@ -27,3 +29,5 @@ api_router.include_router(media_assets.router, prefix="/media-assets", tags=["Me
 api_router.include_router(plans.router, prefix="/plans", tags=["Plans"])
 api_router.include_router(categories.router, prefix="/categories", tags=["Categories"])
 api_router.include_router(post.router, prefix="/post", tags=["Post"])
+api_router.include_router(transcode_mc.router, prefix="/transcodes", tags=["Transcode MC"])
+api_router.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])

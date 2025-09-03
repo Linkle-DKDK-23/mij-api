@@ -13,13 +13,14 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from .posts import Posts
     from .media_renditions import MediaRenditions
+    from .media_rendition_jobs import MediaRenditionJobs
 
 class MediaAssets(Base):
     __tablename__ = "media_assets"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     post_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
-    storage_bucket: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     storage_key: Mapped[str] = mapped_column(Text, nullable=False)
     mime_type: Mapped[str] = mapped_column(Text, nullable=False)
     bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -32,3 +33,4 @@ class MediaAssets(Base):
 
     post: Mapped["Posts"] = relationship("Posts", back_populates="media_assets")
     renditions: Mapped[List["MediaRenditions"]] = relationship("MediaRenditions", back_populates="asset")
+    rendition_jobs: Mapped[List["MediaRenditionJobs"]] = relationship("MediaRenditionJobs", back_populates="asset")

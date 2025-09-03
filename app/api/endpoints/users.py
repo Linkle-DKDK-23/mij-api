@@ -86,9 +86,6 @@ def get_user_profile_by_slug_endpoint(
         for post in profile_data["posts"]:
             profile_posts.append(ProfilePostResponse(
                 id=post.id,
-                title=post.title,
-                thumbnail_storage_key=post.thumbnail_storage_key,
-                video_duration=post.video_duration,
                 created_at=post.created_at
             ))
         
@@ -109,20 +106,17 @@ def get_user_profile_by_slug_endpoint(
                 if post_obj:
                     post = ProfilePostResponse(
                         id=post_obj.id,
-                        title=post_obj.title,
-                        thumbnail_storage_key=post_obj.thumbnail_storage_key,
-                        video_duration=post_obj.video_duration,
                         created_at=post_obj.created_at
                     )
             
             profile_purchases.append(ProfilePurchaseResponse(
                 id=purchase.id,
                 amount=purchase.amount,
-                created_at=purchase.order.created_at,  # Ordersテーブルのcreated_atを使用
+                created_at=purchase.order.created_at,
                 post=post
             ))
         
-        profile_gacha_items = []
+        profile_gacha_items = [] 
         for gacha_item in profile_data["gacha_items"]:
             profile_gacha_items.append(ProfileGachaResponse(
                 id=gacha_item.id,

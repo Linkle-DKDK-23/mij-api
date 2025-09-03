@@ -1,88 +1,116 @@
 
 # アカウント種別
 class AccountType:
-    # 一般ユーザー
-    GENERAL_USER = 1
-    # クリエイター
-    CREATOR = 2
-    # 管理者
-    ADMIN = 3
+    GENERAL_USER = 1 # 一般ユーザー
+    CREATOR = 2 # クリエイター
+    ADMIN = 3 # 管理者
 
 # アカウントステータス
 class AccountStatus:
-    # 有効
-    ACTIVE = 1
-    # 無効
-    INACTIVE = 2
-    # 停止
-    SUSPENDED = 3
-    # 削除
-    DELETED = 4
+    ACTIVE = 1 # 有効
+    INACTIVE = 2 # 無効
+    SUSPENDED = 3 # 停止
+    DELETED = 4 # 削除
 
 # クリエイターステータス
 class CreatorStatus:
-    # 入力済み
-    ENTERED = 1
-    # 申請中
-    APPLICATED = 2
-    # 本人確認済み
-    VERIFIED = 3
-    # 拒否
-    REJECTED = 4
-    # 停止
-    SUSPENDED = 5
+    ENTERED = 1 # 入力済み
+    APPLICATED = 2 # 申請中
+    VERIFIED = 3 # 本人確認済み
+    REJECTED = 4 # 拒否
+    SUSPENDED = 5 # 停止
 
+# 本人確認ステータス
 class VerificationStatus:
-    # 未承認
-    PENDING = 0
-    # 承認
-    APPROVED = 1
-    # 拒否
-    REJECTED = 2
+    PENDING = 0 # 未承認
+    APPROVED = 1 # 承認
+    REJECTED = 2 # 拒否
 
+# 本人確認ステータス
 class IdentityStatus:
-    # 未承認
-    PENDING = 0
-    # 承認
-    APPROVED = 1
-    # 拒否
-    REJECTED = 2
+    PENDING = 0 # 未承認
+    APPROVED = 1 # 承認
+    REJECTED = 2 # 拒否
 
+# 本人確認書類の種類
 class IdentityKind:
-    # 本人確認書類（正面）
-    FRONT = 1
-    # 本人確認書類（背面）
-    BACK = 2
-    # 本人確認書類（本人写真）
-    SELFIE = 3
+    FRONT = 1 # 本人確認書類（正面）
+    BACK = 2 # 本人確認書類（背面）
+    SELFIE = 3 # 本人確認書類（本人写真）
 
+# 投稿ステータス
 class PostStatus:
-    # 未承認
-    PENDING = 1
-    REJECTED = 2
-    # 非公開
-    UNPUBLISHED = 3
-    # 削除
-    DELETED = 4
-    # 公開
-    APPROVED = 5
+    PENDING = 1 # 未承認
+    REJECTED = 2 # 拒否
+    UNPUBLISHED = 3 # 非公開
+    DELETED = 4 # 削除
+    APPROVED = 5 # 公開
 
+# 投稿の公開範囲
 class PostVisibility:
-    # 単品
-    SINGLE = 1
-    # プラン
-    PLAN = 2
-    # 両方
-    BOTH = 3
+    SINGLE = 1 # 単品
+    PLAN = 2 # プラン
+    BOTH = 3 # 両方
 
+# プランステータス
 class PlanStatus:
-    # 単品
-    SINGLE = 1
-    # プラン
-    PLAN = 2
+    SINGLE = 1 # 単品
+    PLAN = 2 # プラン
 
+# プランの種類
 class PriceType:
-    # 単品
-    SINGLE = 1
-    # プラン
-    PLAN = 2
+    SINGLE = 1 # 単品
+    PLAN = 2 # プラン
+
+# メディアアセットのkind
+class MediaAssetKind:
+    OGP = 1 # OGP画像
+    THUMBNAIL = 2 # サムネイル画像
+    IMAGES = 3 # 画像（複数）
+    MAIN_VIDEO = 4 # メインビデオ
+    SAMPLE_VIDEO = 5 # サンプルビデオ
+
+# レンディションの種類
+class RenditionKind:
+    PREVIEW_MP4 = 1 # プレビュービデオ
+    HLS_ABR4 = 2 # HLS_ABR4
+
+# レンディションのバックエンド
+class RenditionBackend:
+    MEDIACONVERT = 1 # MediaConvert
+    FARGATE_FFMPEG = 2 # Fargate FFmpeg
+
+# レンディションのステータス
+class RenditionJobStatus:
+    PENDING = 1 # 未実行
+    SUBMITTED = 2 # 実行中
+    PROGRESSING = 3 # 進行中
+    COMPLETE = 4 # 完了
+    ERROR = 9 # エラー
+
+# メディアレンディションの種類
+class MediaRenditionJobKind:
+    PREVIEW_MP4 = 1 # プレビュービデオ
+    HLS_ABR4 = 2 # HLS_ABR4
+
+# メディアレンディションのバックエンド
+class MediaRenditionJobBackend:
+    MEDIACONVERT = 1 # MediaConvert
+    FARGATE_FFMPEG = 2 # Fargate FFmpeg
+
+# メディアレンディションのステータス
+class MediaRenditionJobStatus:
+    PENDING = 1 # 未実行
+    SUBMITTED = 2 # 実行中
+    PROGRESSING = 3 # 進行中
+    COMPLETE = 4 # 完了
+    FAILED = 5 # エラー
+
+# メディアレンディションの種類
+class MediaRenditionKind:
+    HLS_MASTER = 10 # HLS_MASTER
+    HLS_VARIANT_360P  = 11 # HLS_VARIANT_360P
+    HLS_VARIANT_480P  = 12 # HLS_VARIANT_480P
+    HLS_VARIANT_720P  = 13 # HLS_VARIANT_720P
+    HLS_VARIANT_1080P = 14 # HLS_VARIANT_1080P
+    FFMPEG = 20 # FFMPEG

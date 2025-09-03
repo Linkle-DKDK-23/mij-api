@@ -13,10 +13,21 @@ from app.deps.auth import get_current_user
 from app.db.base import get_db
 from app.services.s3.keygen import post_media_image_key, post_media_video_key
 from app.schemas.commons import PresignResponseItem, UploadItem
-from typing import Dict
-from app.crud.post_crud import update_post_media_assets
+from typing import Dict, List, Union
+from app.crud.media_assets_crud import create_media_asset
+from app.models.posts import Posts
+from app.constants.enums import MediaAssetKind
 
 router = APIRouter()
+
+# 文字列kindから整数kindへのマッピング
+KIND_MAPPING = {
+    "ogp": MediaAssetKind.OGP,
+    "thumbnail": MediaAssetKind.THUMBNAIL,
+    "images": MediaAssetKind.IMAGES,
+    "main": MediaAssetKind.MAIN_VIDEO,
+    "sample": MediaAssetKind.SAMPLE_VIDEO,
+}
 
 @router.post("/")
 async def presign_post_media_video(
@@ -37,34 +48,63 @@ async def presign_post_media_image(
     db: Session = Depends(get_db)
 ):
     try:
-        allowed_kinds =  {"ogp","thumbnail"}
+        allowed_kinds =  {"ogp","thumbnail","images"}
 
         seen = set()
         for f in request.files:
             if f.kind not in allowed_kinds:
                 raise HTTPException(400, f"unsupported kind: {f.kind}")
-            if f.kind in seen:
+            if f.kind != "images" and f.kind in seen:
                 raise HTTPException(400, f"duplicated kind: {f.kind}")
             seen.add(f.kind)
 
-        uploads: Dict[ImageKind, UploadItem] = {}
+        uploads: Dict[ImageKind, Union[PresignResponseItem, List[PresignResponseItem]]] = {}
+        updated_posts = set()  # 更新された投稿IDを保存
 
         for f in request.files:
             key = post_media_image_key(f.kind, str(user.id), str(f.post_id), f.ext)
 
-            response = presign_put_public("public", key, f.content_type)
+            if f.kind == "images":
+                response = presign_put("video", key, f.content_type)
+            else:
+                response = presign_put_public("public", key, f.content_type)
 
-            uploads[f.kind] = PresignResponseItem(
-                key=response["key"],
-                upload_url=response["upload_url"],
-                expires_in=response["expires_in"],
-                required_headers=response["required_headers"]
-            )
-            post = update_post_media_assets(db, f.post_id, key, f.kind)
+            if f.kind == "images":
+                if f.kind not in uploads:
+                    uploads[f.kind] = []
+                uploads[f.kind].append(PresignResponseItem(
+                    key=response["key"],
+                    upload_url=response["upload_url"],
+                    expires_in=response["expires_in"],
+                    required_headers=response["required_headers"]
+                ))
+            else:
+                uploads[f.kind] = PresignResponseItem(
+                    key=response["key"],
+                    upload_url=response["upload_url"],
+                    expires_in=response["expires_in"],
+                    required_headers=response["required_headers"]
+                )
+            
+            # メディアアセット作成
+            media_asset_data = {
+                "post_id": f.post_id,
+                "kind": KIND_MAPPING[f.kind],
+                "storage_key": key,
+                "mime_type": f.content_type,
+                "bytes": 0,
+            }
+            media_asset = create_media_asset(db, media_asset_data)
+            updated_posts.add(f.post_id)
 
         db.commit()
-        db.refresh(post)
         
+        # 更新された投稿をrefresh
+        for post_id in updated_posts:
+            post = db.query(Posts).filter(Posts.id == post_id).first()
+            if post:
+                db.refresh(post)
+                db.refresh(media_asset)
 
         return PostMediaImagePresignResponse(uploads=uploads)
     except Exception as e:
@@ -85,7 +125,7 @@ async def presign_post_media_video(
         for f in request.files:
             if f.kind not in allowed_kinds:
                 raise HTTPException(400, f"unsupported kind: {f.kind}")
-            if f.kind in seen:
+            if f.kind != "images" and f.kind in seen:
                 raise HTTPException(400, f"duplicated kind: {f.kind}")
             seen.add(f.kind)
 
@@ -102,10 +142,17 @@ async def presign_post_media_video(
                 expires_in=response["expires_in"],
                 required_headers=response["required_headers"]
             )
-            post = update_post_media_assets(db, f.post_id, key, f.kind)
+            media_asset_data = {
+                "post_id": f.post_id,
+                "kind": KIND_MAPPING[f.kind],
+                "storage_key": key,
+                "mime_type": f.content_type,
+                "bytes": 0,
+            }
+            media_asset = create_media_asset(db, media_asset_data)
 
         db.commit()
-        db.refresh(post)
+        db.refresh(media_asset)
 
         return PostMediaVideoPresignResponse(uploads=uploads)
     except Exception as e:

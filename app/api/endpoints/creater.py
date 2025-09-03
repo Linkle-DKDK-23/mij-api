@@ -15,8 +15,8 @@ from app.crud.creater_crud import (
     get_identity_verification_by_user_id
 )
 from app.deps.auth import get_current_user
-from app.crud.gender_type import create_creator_type
-from app.crud.gender import get_genders, get_gender_by_slug
+from app.crud.gender_type_crud import create_creator_type
+from app.crud.gender_crud import get_genders, get_gender_by_slug
 from app.crud.followes_crud import get_follower_count
 from app.models.creator_type import CreatorType
 from app.crud.post_crud import get_total_likes_by_user_id, get_posts_count_by_user_id

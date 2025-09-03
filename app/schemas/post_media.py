@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import Literal, List
+from typing import Literal, List, Union
 from app.schemas.commons import PresignResponseItem
 from uuid import UUID
 
-ImageKind = Literal["ogp", "thumbnail"]
+ImageKind = Literal["ogp", "thumbnail", "images"]
 VideoKind = Literal["main", "sample"]
 
 class PostMediaImageFileSpec(BaseModel):
@@ -25,7 +25,7 @@ class PostMediaVideoPresignRequest(BaseModel):
     files: List[PostMediaVideoFileSpec] = Field(..., description='例: [{"kind":"main","ext":"mp4"}, ...]')
 
 class PostMediaImagePresignResponse(BaseModel):
-    uploads: dict[str, PresignResponseItem]
+    uploads: dict[str, Union[PresignResponseItem, List[PresignResponseItem]]]
 
 class PostMediaVideoPresignResponse(BaseModel):
     uploads: dict[str, PresignResponseItem]
@@ -34,3 +34,5 @@ class PostRequest(BaseModel):
     title: str
     category_ids: List[str]
     
+class PoseMediaCovertRequest(BaseModel):
+    post_id: UUID
