@@ -83,10 +83,19 @@ def get_user_profile_by_slug_endpoint(
         
         # モデルオブジェクトをスキーマオブジェクトに変換
         profile_posts = []
-        for post in profile_data["posts"]:
+        for post_data in profile_data["posts"]:
+            if hasattr(post_data, 'Posts'):
+                post = post_data.Posts
+                thumbnail_key = post_data.thumbnail_key
+            else:
+                post = post_data
+                thumbnail_key = None
+            
             profile_posts.append(ProfilePostResponse(
                 id=post.id,
-                created_at=post.created_at
+                created_at=post.created_at,
+                description=post.description,
+                thumbnail_url=f"https://cdn-dev.mijfans.jp/{thumbnail_key}" if thumbnail_key else None
             ))
         
         profile_plans = []

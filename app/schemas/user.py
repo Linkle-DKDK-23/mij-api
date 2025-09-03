@@ -18,6 +18,8 @@ class UserOut(BaseModel):
 class ProfilePostResponse(BaseModel):
     id: UUID
     created_at: datetime
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 class ProfilePlanResponse(BaseModel):
     id: UUID
