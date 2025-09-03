@@ -1,19 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
 from app.db.base import get_db
-from app.models.categories import Categories
-from app.models.post_categories import PostCategories
-from app.models.posts import Posts
-from app.models.social import Likes, Follows
-from app.models.user import Users
-from app.models.profiles import Profiles
-from app.models.media_assets import MediaAssets
 from app.schemas.top import (
     GenreResponse, RankingPostResponse, CreatorResponse, 
     RecentPostResponse, TopPageResponse
 )
-from app.constants.enums import AccountType
+from app.crud.top_crud import (
+    get_top_genres, get_ranking_posts, get_top_creators,
+    get_new_creators, get_recent_posts
+)
 
 router = APIRouter()
 
@@ -23,76 +18,11 @@ def get_top_page_data(db: Session = Depends(get_db)):
     トップページ用データを取得
     """
     try:
-        genres = (
-            db.query(
-                Categories.id,
-                Categories.name,
-                func.count(PostCategories.post_id).label('post_count')
-            )
-            .join(PostCategories, Categories.id == PostCategories.category_id)
-            .group_by(Categories.id, Categories.name)
-            .order_by(desc('post_count'))
-            .limit(8)
-            .all()
-        )
-        
-        ranking_posts = (
-            db.query(
-                Posts,
-                func.count(Likes.post_id).label('likes_count'),
-                Profiles.display_name,
-                Profiles.avatar_url,
-                MediaAssets.storage_key.label('thumbnail_key')
-            )
-            .join(Likes, Posts.id == Likes.post_id)
-            .join(Users, Posts.creator_user_id == Users.id)
-            .join(Profiles, Users.id == Profiles.user_id)
-            .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.status == 2))
-            .group_by(Posts.id, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
-            .order_by(desc('likes_count'))
-            .limit(5)
-            .all()
-        )
-        
-        top_creators = (
-            db.query(
-                Users,
-                Profiles.display_name,
-                Profiles.avatar_url,
-                func.count(Follows.creator_user_id).label('followers_count')
-            )
-            .join(Profiles, Users.id == Profiles.user_id)
-            .join(Follows, Users.id == Follows.creator_user_id)
-            .filter(Users.role == AccountType.CREATOR)
-            .group_by(Users.id, Profiles.display_name, Profiles.avatar_url)
-            .order_by(desc('followers_count'))
-            .limit(5)
-            .all()
-        )
-        
-        new_creators = (
-            db.query(Users, Profiles.display_name, Profiles.avatar_url)
-            .join(Profiles, Users.id == Profiles.user_id)
-            .filter(Users.role == AccountType.CREATOR)
-            .order_by(desc(Users.created_at))
-            .limit(5)
-            .all()
-        )
-        
-        recent_posts = (
-            db.query(
-                Posts,
-                Profiles.display_name,
-                Profiles.avatar_url,
-                MediaAssets.storage_key.label('thumbnail_key')
-            )
-            .join(Users, Posts.creator_user_id == Users.id)
-            .join(Profiles, Users.id == Profiles.user_id)
-            .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.status == 2))
-            .order_by(desc(Posts.created_at))
-            .limit(5)
-            .all()
-        )
+        genres = get_top_genres(db, limit=8)
+        ranking_posts = get_ranking_posts(db, limit=5)
+        top_creators = get_top_creators(db, limit=5)
+        new_creators = get_new_creators(db, limit=5)
+        recent_posts = get_recent_posts(db, limit=5)
         
         return TopPageResponse(
             genres=[GenreResponse(id=str(g.id), name=g.name, post_count=g.post_count) for g in genres],

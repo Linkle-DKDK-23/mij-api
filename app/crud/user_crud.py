@@ -114,7 +114,7 @@ def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
     
     posts = (
         db.query(Posts, MediaAssets.storage_key.label('thumbnail_key'))
-        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.status == 2))
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == 2))
         .filter(Posts.creator_user_id == user.id)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.status == PostStatus.APPROVED)
