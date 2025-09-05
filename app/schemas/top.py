@@ -4,6 +4,7 @@ from typing import List, Optional
 class GenreResponse(BaseModel):
     id: str
     name: str
+    slug: str
     post_count: int
 
 class RankingPostResponse(BaseModel):
@@ -12,12 +13,14 @@ class RankingPostResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
+    display_name: str
     creator_avatar_url: Optional[str] = None
     rank: int
 
 class CreatorResponse(BaseModel):
     id: str
     name: str
+    display_name: str
     avatar_url: Optional[str] = None
     followers_count: int
     rank: Optional[int] = None
@@ -27,6 +30,7 @@ class RecentPostResponse(BaseModel):
     description: str
     thumbnail_url: Optional[str] = None
     creator_name: str
+    display_name: str
     creator_avatar_url: Optional[str] = None
 
 class TopPageResponse(BaseModel):

@@ -1,12 +1,18 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from app.models.posts import Posts
 from app.models.social import Likes
 from uuid import UUID
 from datetime import datetime
 from app.constants.enums import PostStatus, MediaAssetKind
 from app.schemas.post import PostCreateRequest
+from app.models.post_categories import PostCategories
+from app.models.categories import Categories
+from typing import List
+from app.models.user import Users
+from app.models.profiles import Profiles
+from app.models.media_assets import MediaAssets
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
@@ -113,3 +119,28 @@ def update_post_status(db: Session, post_id: UUID, status: int):
     db.add(post)
     db.flush()
     return post
+
+def get_posts_by_category_slug(db: Session, slug: str) -> List[Posts]:
+    """
+    カテゴリーに紐づく投稿を取得
+    """
+    return (
+        db.query(
+            Posts,
+            func.count(Likes.post_id).label('likes_count'),
+            Users.slug,
+            Profiles.display_name,
+            Profiles.avatar_url,
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .join(PostCategories, Posts.id == PostCategories.post_id)
+        .join(Categories, PostCategories.category_id == Categories.id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .filter(Categories.slug == slug)
+        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .order_by(desc(Posts.created_at))
+        .all()
+    )
