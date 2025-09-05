@@ -3,16 +3,20 @@ from sqlalchemy.orm import Session
 from app.models.user import Users
 from app.schemas.user import UserCreate
 from app.core.security import hash_password
-from sqlalchemy import select
+from sqlalchemy import select, desc, func
 from app.constants.enums import (
     AccountType, 
     AccountStatus
 )
 from app.crud.profile_crud import get_profile_by_display_name
 from app.models.posts import Posts
-from app.models.plans import Plans
+from app.models.plans import Plans, PostPlans
 from app.models.orders import Orders, OrderItems
-from app.constants.enums import PostStatus
+from app.models.media_assets import MediaAssets
+from app.models.social import Likes, Follows
+from app.models.prices import Prices
+from app.constants.enums import PostStatus, MediaAssetKind, PlanStatus
+
 
 def create_user(db: Session, user_create: UserCreate) -> Users:
     """
@@ -111,11 +115,47 @@ def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
     
     user = get_user_by_id(db, profile.user_id)
     
-    posts = db.query(Posts).filter(Posts.creator_user_id == user.id).filter(Posts.deleted_at.is_(None)).filter(Posts.status == PostStatus.APPROVED).all()
+    posts = (
+        db.query(
+            Posts, 
+            func.count(Likes.post_id).label('likes_count'),
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .filter(Posts.creator_user_id == user.id)
+        .filter(Posts.deleted_at.is_(None))
+        # TODO: アップロードされている動画を取得
+        # .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(Posts.id, MediaAssets.storage_key)  # GROUP BY句を追加
+        .order_by(desc(Posts.created_at))
+        .all()
+    )
     
-    plans = db.query(Plans).filter(Plans.creator_user_id == user.id).filter(Plans.deleted_at.is_(None)).all()
+    plans = db.query(Plans).filter(Plans.creator_user_id == user.id).filter(Plans.type == PlanStatus.PLAN).filter(Plans.deleted_at.is_(None)).all()
     
-    individual_purchases = db.query(OrderItems).join(Orders).filter(Orders.user_id == user.id).filter(OrderItems.item_type == 1).all()
+    individual_purchases = (
+        db.query(
+            Posts, 
+            func.count(Likes.post_id).label('likes_count'),
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(PostPlans, Posts.id == PostPlans.post_id)  # PostPlansテーブルを通じて結合
+        .join(Plans, PostPlans.plan_id == Plans.id)  # Plansテーブルと結合
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .filter(Posts.creator_user_id == user.id)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Plans.type == PlanStatus.SINGLE)  # typeが1（SINGLE）のもののみ
+        .filter(Plans.deleted_at.is_(None))  # 削除されていないプランのみ
+        # TODO: アップロードされている動画を取得
+        # .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(Posts.id, MediaAssets.storage_key)
+        .order_by(desc(Posts.created_at))
+        .all()
+    )
     
     gacha_items = db.query(OrderItems).join(Orders).filter(Orders.user_id == user.id).filter(OrderItems.item_type == 2).all()
     

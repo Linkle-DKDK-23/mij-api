@@ -83,10 +83,22 @@ def get_user_profile_by_slug_endpoint(
         
         # モデルオブジェクトをスキーマオブジェクトに変換
         profile_posts = []
-        for post in profile_data["posts"]:
+        for post_data in profile_data["posts"]:
+            if hasattr(post_data, 'Posts'):
+                post = post_data.Posts
+                likes_count = post_data.likes_count
+                thumbnail_key = post_data.thumbnail_key
+            else:
+                post = post_data
+                likes_count = None
+                thumbnail_key = None
+            
             profile_posts.append(ProfilePostResponse(
                 id=post.id,
-                created_at=post.created_at
+                likes_count=likes_count,
+                created_at=post.created_at,
+                description=post.description,
+                thumbnail_url=f"https://cdn-dev.mijfans.jp/{thumbnail_key}" if thumbnail_key else None
             ))
         
         profile_plans = []
@@ -99,21 +111,21 @@ def get_user_profile_by_slug_endpoint(
         
         profile_purchases = []
         for purchase in profile_data["individual_purchases"]:
-            # 投稿情報を取得
-            post = None
-            if purchase.post_id:
-                post_obj = db.query(Posts).filter(Posts.id == purchase.post_id).first()
-                if post_obj:
-                    post = ProfilePostResponse(
-                        id=post_obj.id,
-                        created_at=post_obj.created_at
-                    )
-            
+            if hasattr(purchase, 'Posts'):
+                post = purchase.Posts
+                likes_count = purchase.likes_count
+                thumbnail_key = purchase.thumbnail_key
+            else:
+                post = purchase
+                likes_count = None
+                thumbnail_key = None
+
             profile_purchases.append(ProfilePurchaseResponse(
-                id=purchase.id,
-                amount=purchase.amount,
-                created_at=purchase.order.created_at,
-                post=post
+                id=post.id,
+                likes_count=likes_count,
+                created_at=post.created_at,
+                description=post.description,
+                thumbnail_url=f"https://cdn-dev.mijfans.jp/{thumbnail_key}" if thumbnail_key else None
             ))
         
         profile_gacha_items = [] 

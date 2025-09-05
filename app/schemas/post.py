@@ -19,3 +19,12 @@ class PostCreateRequest(BaseModel):
 
 class PostResponse(BaseModel):
 	id: UUID
+
+class PostCategoryResponse(BaseModel):
+	id: UUID
+	description: str
+	thumbnail_url: Optional[str] = None
+	likes_count: int
+	creator_name: str
+	display_name: str
+	creator_avatar_url: Optional[str] = None

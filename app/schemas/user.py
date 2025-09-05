@@ -17,7 +17,10 @@ class UserOut(BaseModel):
 
 class ProfilePostResponse(BaseModel):
     id: UUID
+    likes_count: int
     created_at: datetime
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 class ProfilePlanResponse(BaseModel):
     id: UUID
@@ -26,9 +29,11 @@ class ProfilePlanResponse(BaseModel):
 
 class ProfilePurchaseResponse(BaseModel):
     id: UUID
-    amount: int
+    likes_count: int
     created_at: datetime
-    post: Optional[ProfilePostResponse] = None
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    created_at: datetime
 
 class ProfileGachaResponse(BaseModel):
     id: UUID
