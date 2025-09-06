@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.deps.auth import get_current_user
@@ -146,5 +146,14 @@ async def get_posts():
     return {"message": "Hello, World!"}
 
 @router.get("/detail")
-async def get_post_detail():
-    return {"message": "Hello, World!"}
+async def get_post_detail(
+    post_id: str = Query(..., description="投稿ID"),
+    user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        # post = db.query(Posts).filter(Posts.id == post_id).first()
+        return post_id
+    except Exception as e:
+        print("投稿詳細取得エラーが発生しました", e)
+        raise HTTPException(status_code=500, detail=str(e))

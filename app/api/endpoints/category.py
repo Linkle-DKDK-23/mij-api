@@ -16,6 +16,7 @@ async def get_category_by_slug(
     db: Session = Depends(get_db)
 ):
     try:
+        # TODO: ランキングの返却
         posts = get_posts_by_category_slug(db, slug)
         return [PostCategoryResponse(
             id=post.Posts.id,
