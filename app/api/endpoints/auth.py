@@ -16,6 +16,7 @@ from app.core.security import (
 from app.core.cookies import set_auth_cookies, clear_auth_cookies, REFRESH_COOKIE, CSRF_COOKIE, ACCESS_COOKIE
 from app.core.config import settings
 from app.deps.auth import get_current_user
+from datetime import datetime, timedelta
 
 
 
@@ -47,6 +48,9 @@ def login(payload: LoginIn, response: Response, db: Session = Depends(get_db)):
         if getattr(user, "is_active", True) is False:
             raise HTTPException(status_code=403, detail="User is not active")
         
+        # ログイン時刻を更新
+        user.last_login_at = datetime.utcnow()
+        db.commit()
         
         access = create_access_token(str(user.id))
         refresh = create_refresh_token(str(user.id))
@@ -63,18 +67,34 @@ def login(payload: LoginIn, response: Response, db: Session = Depends(get_db)):
 
 # 認可テスト用の /auth/me
 @router.get("/me")
-def me(user: Users = Depends(get_current_user)):
+def me(user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     ユーザー情報取得
 
     Args:
         user (Users): ユーザー
+        db (Session): データベースセッション
 
     Returns:
         dict: ユーザー情報
     """
     try:
+        # 48時間（2日）チェック
+        if user.last_login_at:
+            time_since_last_login = datetime.utcnow() - user.last_login_at
+            if time_since_last_login > timedelta(hours=48):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, 
+                    detail="Session expired due to inactivity"
+                )
+        
+        # アクセス時刻を更新
+        user.last_login_at = datetime.utcnow()
+        db.commit()
+        
         return {"id": str(user.id), "email": user.email}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
