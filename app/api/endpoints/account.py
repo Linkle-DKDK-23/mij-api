@@ -12,7 +12,7 @@ from app.schemas.account import (
     AvatarPresignRequest, 
     AccountPresignResponse,
     AccountPostStatusResponse,
-    AccountPostResponse,  # 追加
+    AccountPostResponse,
 )
 from app.schemas.commons import UploadItem, PresignResponseItem
 from app.crud.followes_crud import get_follower_count

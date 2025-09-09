@@ -1,5 +1,5 @@
 # app/deps/auth.py
-from fastapi import Depends, HTTPException, status, Cookie
+from fastapi import Depends, HTTPException, status, Cookie, Header
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.core.security import decode_token
@@ -24,4 +24,54 @@ def get_current_user(
     user = get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+def get_current_admin_user(
+    db: Session = Depends(get_db),
+    authorization: str = Header(None),
+):
+    """管理者用認証 - Bearerトークンを使用"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    token = authorization.split(" ")[1]
+    
+    try:
+        payload = decode_token(token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("sub")
+    user = get_user_by_id(db, user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 管理者権限確認 (roleは数値: 1=user, 2=creator, 3=admin)
+    if user.role != 3:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
     return user

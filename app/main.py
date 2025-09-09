@@ -10,6 +10,9 @@ app = FastAPI()
 origins = [
     # ローカル開発用
     "http://localhost:5173",
+
+    "http://localhost:5176",
+
     # 開発環境用
     "https://stg-admin.linkle.group",
     # 本番環境用
