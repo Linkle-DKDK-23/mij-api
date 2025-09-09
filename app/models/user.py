@@ -29,11 +29,12 @@ class Users(Base):
     email: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     password_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    role: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    role: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
     deleted_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     
     profile: Mapped[Optional["Profiles"]] = relationship("Profiles", back_populates="user", uselist=False)
     creator: Mapped[Optional["Creators"]] = relationship("Creators", back_populates="user", uselist=False)

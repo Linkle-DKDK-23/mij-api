@@ -4,7 +4,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from app.core.cookies import CSRF_COOKIE
 
-EXCLUDE_PATHS = {"/auth/login", "/auth/refresh", "/auth/logout", "/users/register", "/webhooks/mediaconvert"}  # 認証系はここで免除
+EXCLUDE_PATHS = {
+    "/auth/login", "/auth/refresh", "/auth/logout", 
+    "/users/register", "/webhooks/mediaconvert", "/admin/users",
+    "/admin/auth/login", "/admin/auth/logout", "/admin/auth/me"
+}
 
 class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

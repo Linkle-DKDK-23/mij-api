@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Dict
 from app.schemas.commons import PresignResponseItem
+from app.models.posts import Posts
 
 Kind = Literal["avatar", "cover"]
 
@@ -43,3 +44,21 @@ class AccountUpdateRequest(BaseModel):
 class AccountUpdateResponse(BaseModel):
     message: str
     success: bool
+
+class AccountPostResponse(BaseModel):
+    id: str
+    description: str
+    thumbnail_url: Optional[str] = None
+    likes_count: int
+    creator_name: str
+    display_name: str
+    creator_avatar_url: Optional[str] = None
+    price: int
+    currency: str
+
+class AccountPostStatusResponse(BaseModel):
+    pending_posts: List[AccountPostResponse] = []
+    rejected_posts: List[AccountPostResponse] = []
+    unpublished_posts: List[AccountPostResponse] = []
+    deleted_posts: List[AccountPostResponse] = []
+    approved_posts: List[AccountPostResponse] = []
