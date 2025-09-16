@@ -65,7 +65,7 @@ async def presign_post_media_image(
             key = post_media_image_key(f.kind, str(user.id), str(f.post_id), f.ext)
 
             if f.kind == "images":
-                response = presign_put("video", key, f.content_type)
+                response = presign_put("examination", key, f.content_type)
             else:
                 response = presign_put_public("public", key, f.content_type)
 
@@ -134,7 +134,7 @@ async def presign_post_media_video(
         for f in request.files:
             key = post_media_video_key(str(user.id), str(f.post_id), f.ext, f.kind)
 
-            response = presign_put("video", key, f.content_type)
+            response = presign_put("examination", key, f.content_type)
 
             uploads[f.kind] = PresignResponseItem(
                 key=response["key"],

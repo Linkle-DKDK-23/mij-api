@@ -1,8 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-
+from uuid import UUID
+from os import getenv
 from app.db.base import get_db
 from app.deps.auth import get_current_admin_user
 from app.schemas.admin import (
@@ -15,7 +16,8 @@ from app.schemas.admin import (
     CreatorApplicationReview,
     IdentityVerificationReview,
     PaginatedResponse,
-    CreateUserRequest
+    CreateUserRequest,
+    AdminPostDetailResponse
 )
 from app.models.user import Users
 from app.models.creators import Creators
@@ -23,44 +25,45 @@ from app.models.identity import IdentityVerifications
 from app.models.posts import Posts
 from app.models.profiles import Profiles
 from app.core.security import hash_password
+from app.crud.admin_crud import (
+    get_dashboard_info,
+    get_users_paginated,
+    update_user_status,
+    get_creator_applications_paginated,
+    update_creator_application_status,
+    get_identity_verifications_paginated,
+    update_identity_verification_status,
+    get_posts_paginated,
+    update_post_status,
+    get_post_by_id,
+)
+from app.services.s3.presign import presign_get
+from app.constants.enums import MediaAssetKind
 
 router = APIRouter()
 
 @router.get("/dashboard/stats", response_model=AdminDashboardStats)
-async def get_dashboard_stats(
+def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin_user)
 ):
     """管理者ダッシュボード統計情報を取得"""
     
-    # 基本統計を手動で計算
-    try:
-        total_users = db.query(Users).count()
-        pending_creator_applications = db.query(Creators).filter(Creators.status == 1).count()
-        pending_identity_verifications = db.query(IdentityVerifications).filter(IdentityVerifications.status == 1).count() 
-        total_posts = db.query(Posts).count()
-    except Exception as e:
-        # エラーの場合は仮の値を返す
-        total_users = 100
-        pending_creator_applications = 5
-        pending_identity_verifications = 3
-        total_posts = 50
-    
-    # 今月の売上（仮の値）
-    monthly_revenue = 100000
-    active_subscriptions = 500
+    # CRUDクラスから統計情報を取得
+    stats = get_dashboard_info(db)
     
     return AdminDashboardStats(
-        total_users=total_users,
-        pending_creator_applications=pending_creator_applications,
-        pending_identity_verifications=pending_identity_verifications,
-        total_posts=total_posts,
-        monthly_revenue=monthly_revenue,
-        active_subscriptions=active_subscriptions
+        total_users=stats["total_users"],
+        pending_creator_applications=stats["pending_creator_applications"],
+        pending_identity_verifications=stats["pending_identity_verifications"],
+        pending_post_reviews=stats["pending_post_reviews"],
+        total_posts=stats["total_posts"],
+        monthly_revenue=stats["monthly_revenue"],
+        active_subscriptions=stats["active_subscriptions"]
     )
 
 @router.get("/users", response_model=PaginatedResponse[AdminUserResponse])
-async def get_users(
+def get_users(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
@@ -71,41 +74,14 @@ async def get_users(
 ):
     """ユーザー一覧を取得"""
     
-    skip = (page - 1) * limit
-    
-    try:
-        query = db.query(Users)
-        
-        if search:
-            query = query.filter(
-                (Users.display_name.ilike(f"%{search}%")) |
-                (Users.email.ilike(f"%{search}%"))
-            )
-        
-        if role:
-            query = query.filter(Users.account_type == role)
-        
-        # ソート処理
-        if sort == "created_at_desc":
-            query = query.order_by(Users.created_at.desc())
-        elif sort == "created_at_asc":
-            query = query.order_by(Users.created_at.asc())
-        elif sort == "display_name_asc":
-            query = query.order_by(Users.display_name.asc())
-        elif sort == "display_name_desc":
-            query = query.order_by(Users.display_name.desc())
-        elif sort == "email_asc":
-            query = query.order_by(Users.email.asc())
-        else:
-            query = query.order_by(Users.created_at.desc())
-        
-        total = query.count()
-        users = query.offset(skip).limit(limit).all()
-        
-    except Exception as e:
-        # エラーの場合は空のリストを返す
-        users = []
-        total = 0
+    users, total = get_users_paginated(
+        db=db,
+        page=page,
+        limit=limit,
+        search=search,
+        role=role,
+        sort=sort
+    )
     
     return PaginatedResponse(
         data=[AdminUserResponse.from_orm(user) for user in users],
@@ -116,7 +92,7 @@ async def get_users(
     )
 
 @router.patch("/users/{user_id}/status")
-async def update_user_status(
+def update_user_status(
     user_id: str,
     status: str,
     db: Session = Depends(get_db),
@@ -124,19 +100,14 @@ async def update_user_status(
 ):
     """ユーザーのステータスを更新"""
     
-    user = db.query(Users).filter(Users.id == user_id).first()
-    if not user:
+    success = update_user_status(db, user_id, status)
+    if not success:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
-    
-    # ステータス更新（実装に応じて調整）
-    user.account_status = 2 if status == "suspended" else 1
-    db.commit()
-    db.refresh(user)
     
     return {"message": "ユーザーステータスを更新しました"}
 
 @router.post("/users", response_model=AdminUserResponse)
-async def create_user(
+def create_user(
     user_data: CreateUserRequest,
     db: Session = Depends(get_db),
 ):
@@ -186,7 +157,7 @@ async def create_user(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/create-test-admin")
-async def create_test_admin(
+def create_test_admin(
     db: Session = Depends(get_db)
 ):
     """テスト用管理者ユーザーを作成"""
@@ -236,7 +207,7 @@ async def create_test_admin(
     
 
 @router.get("/creator-applications", response_model=PaginatedResponse[AdminCreatorApplicationResponse])
-async def get_creator_applications(
+def get_creator_applications(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
@@ -247,39 +218,14 @@ async def get_creator_applications(
 ):
     """クリエイター申請一覧を取得"""
     
-    skip = (page - 1) * limit
-    
-    try:
-        query = db.query(Creators).join(Users)
-        
-        if search:
-            query = query.filter(
-                (Users.display_name.ilike(f"%{search}%")) |
-                (Users.email.ilike(f"%{search}%"))
-            )
-        
-        if status:
-            status_map = {"pending": 1, "approved": 2, "rejected": 3}
-            query = query.filter(Creators.status == status_map.get(status, 1))
-        
-        # ソート処理
-        if sort == "created_at_desc":
-            query = query.order_by(Creators.created_at.desc())
-        elif sort == "created_at_asc":
-            query = query.order_by(Creators.created_at.asc())
-        elif sort == "user_name_asc":
-            query = query.order_by(Users.display_name.asc())
-        elif sort == "user_name_desc":
-            query = query.order_by(Users.display_name.desc())
-        else:
-            query = query.order_by(Creators.created_at.desc())
-        
-        total = query.count()
-        applications = query.offset(skip).limit(limit).all()
-        
-    except Exception as e:
-        applications = []
-        total = 0
+    applications, total = get_creator_applications_paginated(
+        db=db,
+        page=page,
+        limit=limit,
+        search=search,
+        status=status,
+        sort=sort
+    )
     
     return PaginatedResponse(
         data=[AdminCreatorApplicationResponse.from_orm(app) for app in applications],
@@ -290,7 +236,7 @@ async def get_creator_applications(
     )
 
 @router.get("/creator-applications/{application_id}", response_model=AdminCreatorApplicationResponse)
-async def get_creator_application(
+def get_creator_application(
     application_id: str,
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin_user)
@@ -304,7 +250,7 @@ async def get_creator_application(
     return AdminCreatorApplicationResponse.from_orm(application)
 
 @router.patch("/creator-applications/{application_id}/review")
-async def review_creator_application(
+def review_creator_application(
     application_id: str,
     review: CreatorApplicationReview,
     db: Session = Depends(get_db),
@@ -312,30 +258,14 @@ async def review_creator_application(
 ):
     """クリエイター申請を審査"""
     
-    application = db.query(Creators).filter(Creators.id == application_id).first()
-    if not application:
-        raise HTTPException(status_code=404, detail="申請が見つかりません")
-    
-    if application.status != 1:  # 1 = pending
-        raise HTTPException(status_code=400, detail="この申請は既に審査済みです")
-    
-    # 申請を更新
-    status_map = {"approved": 2, "rejected": 3}  # 2 = approved, 3 = rejected
-    application.status = status_map[review.status]
-    application.updated_at = datetime.utcnow()
-    
-    # 承認の場合、ユーザーのアカウントタイプをクリエイターに更新
-    if review.status == "approved":
-        user = db.query(Users).filter(Users.id == application.user_id).first()
-        if user:
-            user.account_type = 2  # 2 = creator
-    
-    db.commit()
+    success = update_creator_application_status(db, application_id, review.status)
+    if not success:
+        raise HTTPException(status_code=404, detail="申請が見つかりませんまたは既に審査済みです")
     
     return {"message": "申請審査を完了しました"}
 
 @router.get("/identity-verifications", response_model=PaginatedResponse[AdminIdentityVerificationResponse])
-async def get_identity_verifications(
+def get_identity_verifications(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
@@ -346,39 +276,14 @@ async def get_identity_verifications(
 ):
     """身分証明審査一覧を取得"""
     
-    skip = (page - 1) * limit
-    
-    try:
-        query = db.query(IdentityVerifications).join(Users)
-        
-        if search:
-            query = query.filter(
-                (Users.display_name.ilike(f"%{search}%")) |
-                (Users.email.ilike(f"%{search}%"))
-            )
-        
-        if status:
-            status_map = {"pending": 1, "approved": 2, "rejected": 3}
-            query = query.filter(IdentityVerifications.status == status_map.get(status, 1))
-        
-        # ソート処理
-        if sort == "created_at_desc":
-            query = query.order_by(IdentityVerifications.created_at.desc())
-        elif sort == "created_at_asc":
-            query = query.order_by(IdentityVerifications.created_at.asc())
-        elif sort == "user_name_asc":
-            query = query.order_by(Users.display_name.asc())
-        elif sort == "user_name_desc":
-            query = query.order_by(Users.display_name.desc())
-        else:
-            query = query.order_by(IdentityVerifications.created_at.desc())
-        
-        total = query.count()
-        verifications = query.offset(skip).limit(limit).all()
-        
-    except Exception as e:
-        verifications = []
-        total = 0
+    verifications, total = get_identity_verifications_paginated(
+        db=db,
+        page=page,
+        limit=limit,
+        search=search,
+        status=status,
+        sort=sort
+    )
     
     return PaginatedResponse(
         data=[AdminIdentityVerificationResponse.from_orm(v) for v in verifications],
@@ -389,7 +294,7 @@ async def get_identity_verifications(
     )
 
 @router.get("/identity-verifications/{verification_id}", response_model=AdminIdentityVerificationResponse)
-async def get_identity_verification(
+def get_identity_verification(
     verification_id: str,
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin_user)
@@ -403,7 +308,7 @@ async def get_identity_verification(
     return AdminIdentityVerificationResponse.from_orm(verification)
 
 @router.patch("/identity-verifications/{verification_id}/review")
-async def review_identity_verification(
+def review_identity_verification(
     verification_id: str,
     review: IdentityVerificationReview,
     db: Session = Depends(get_db),
@@ -411,24 +316,14 @@ async def review_identity_verification(
 ):
     """身分証明を審査"""
     
-    verification = db.query(IdentityVerifications).filter(IdentityVerifications.id == verification_id).first()
-    if not verification:
-        raise HTTPException(status_code=404, detail="審査が見つかりません")
-    
-    if verification.status != 1:  # 1 = pending
-        raise HTTPException(status_code=400, detail="この審査は既に完了済みです")
-    
-    # 審査を更新
-    status_map = {"approved": 2, "rejected": 3}  # 2 = approved, 3 = rejected
-    verification.status = status_map[review.status]
-    verification.updated_at = datetime.utcnow()
-    
-    db.commit()
+    success = update_identity_verification_status(db, verification_id, review.status)
+    if not success:
+        raise HTTPException(status_code=404, detail="審査が見つかりませんまたは既に完了済みです")
     
     return {"message": "身分証明審査を完了しました"}
 
 @router.get("/posts", response_model=PaginatedResponse[AdminPostResponse])
-async def get_posts(
+def get_posts(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
@@ -439,35 +334,14 @@ async def get_posts(
 ):
     """投稿一覧を取得"""
     
-    skip = (page - 1) * limit
-    
-    try:
-        query = db.query(Posts).join(Users)
-        
-        if search:
-            query = query.filter(
-                (Posts.title.ilike(f"%{search}%")) |
-                (Users.display_name.ilike(f"%{search}%"))
-            )
-        
-        if status:
-            status_map = {"draft": 1, "published": 2, "archived": 3}
-            query = query.filter(Posts.status == status_map.get(status, 2))
-        
-        # ソート処理
-        if sort == "created_at_desc":
-            query = query.order_by(Posts.created_at.desc())
-        elif sort == "created_at_asc":
-            query = query.order_by(Posts.created_at.asc())
-        else:
-            query = query.order_by(Posts.created_at.desc())
-        
-        total = query.count()
-        posts = query.offset(skip).limit(limit).all()
-        
-    except Exception as e:
-        posts = []
-        total = 0
+    posts, total = get_posts_paginated(
+        db=db,
+        page=page,
+        limit=limit,
+        search=search,
+        status=status,
+        sort=sort
+    )
     
     return PaginatedResponse(
         data=[AdminPostResponse.from_orm(post) for post in posts],
@@ -478,7 +352,7 @@ async def get_posts(
     )
 
 @router.patch("/posts/{post_id}/status")
-async def update_post_status(
+def update_post_status(
     post_id: str,
     status: str,
     db: Session = Depends(get_db),
@@ -486,20 +360,39 @@ async def update_post_status(
 ):
     """投稿のステータスを更新"""
     
-    post = db.query(Posts).filter(Posts.id == post_id).first()
-    if not post:
+    success = update_post_status(db, post_id, status)
+    if not success:
         raise HTTPException(status_code=404, detail="投稿が見つかりません")
-    
-    status_map = {"published": 2, "archived": 3, "draft": 1}
-    post.status = status_map.get(status, 2)
-    post.updated_at = datetime.utcnow()
-    
-    db.commit()
     
     return {"message": "投稿ステータスを更新しました"}
 
+@router.get("/posts/{post_id}", response_model=AdminPostDetailResponse)
+def get_post(
+    post_id: str,
+    db: Session = Depends(get_db),
+    # current_admin: Users = Depends(get_current_admin_user)
+):
+    """投稿詳細を取得"""
+    
+    post_data = get_post_by_id(db, post_id)
+
+    # メディアアセットの情報からkindが3,4,5のものはpresign_getを呼び出し、urlを取得
+    CDN_URL = getenv("CDN_BASE_URL", "")
+    for media_asset_id, media_asset_data in post_data['media_assets'].items():
+        if media_asset_data['kind'] in [MediaAssetKind.IMAGES, MediaAssetKind.MAIN_VIDEO, MediaAssetKind.SAMPLE_VIDEO]:
+            presign_url = presign_get("examination", media_asset_data['storage_key'])
+            post_data['media_assets'][media_asset_id]['storage_key'] = presign_url['download_url']
+        elif media_asset_data['kind'] in [MediaAssetKind.OGP, MediaAssetKind.THUMBNAIL]:
+            post_data['media_assets'][media_asset_id]['storage_key'] = CDN_URL + "/" + media_asset_data['storage_key']
+
+    if not post_data:
+        raise HTTPException(status_code=404, detail="投稿が見つかりません")
+    
+    return AdminPostDetailResponse(**post_data)
+
+
 @router.get("/sales", response_model=List[AdminSalesData])
-async def get_sales_data(
+def get_sales_data(
     period: str = Query("monthly", regex="^(daily|weekly|monthly|yearly)$"),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -529,7 +422,7 @@ async def get_sales_data(
     return [AdminSalesData(**data) for data in mock_data]
 
 @router.get("/sales/report")
-async def get_sales_report(
+def get_sales_report(
     start_date: str,
     end_date: str,
     format: str = Query("csv", regex="^(csv|json)$"),

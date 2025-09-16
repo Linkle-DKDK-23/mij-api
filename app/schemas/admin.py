@@ -1,7 +1,10 @@
 from datetime import datetime
-from typing import Optional, List, Generic, TypeVar
+from typing import Optional, List, Generic, TypeVar, Dict
 from pydantic import BaseModel
 from pydantic.generics import GenericModel
+import os
+
+CDN_URL = os.getenv("CDN_BASE_URL")
 
 # Generic type for paginated responses
 T = TypeVar('T')
@@ -17,6 +20,7 @@ class AdminDashboardStats(BaseModel):
     total_users: int
     pending_creator_applications: int
     pending_identity_verifications: int
+    pending_post_reviews: int  # 投稿申請中件数を追加
     total_posts: int
     monthly_revenue: float
     active_subscriptions: int
@@ -50,7 +54,7 @@ class AdminUserResponse(BaseModel):
             "created_at": user.created_at,
             "updated_at": user.updated_at,
             "display_name": user.profile.display_name if user.profile else None,
-            "avatar_url": user.profile.avatar_url if user.profile else None
+            "avatar_url": f"{CDN_URL}/{user.profile.avatar_url}" if user.profile else None
         }
         return cls(**data)
 
@@ -108,11 +112,15 @@ class IdentityVerificationReview(BaseModel):
 
 class AdminPostResponse(BaseModel):
     id: str
+    title: Optional[str]  # フロントエンド側の期待に合わせてtitleフィールドを追加
+    content: Optional[str]  # フロントエンド側の期待に合わせてcontentフィールドを追加
     description: Optional[str]
     creator_user_id: str
     creator: AdminUserResponse
-    status: int
+    status: str  # フロントエンド側でstring型を期待しているため文字列に変更
     visibility: int
+    view_count: int = 0  # フロントエンド側で期待されるフィールドを追加
+    like_count: int = 0  # フロントエンド側で期待されるフィールドを追加
     created_at: datetime
     updated_at: datetime
 
@@ -121,13 +129,21 @@ class AdminPostResponse(BaseModel):
 
     @classmethod
     def from_orm(cls, post):
+        # statusを数値から文字列に変換
+        status_map = {1: "draft", 2: "published", 3: "archived", 4: "pending", 5: "completed"}
+        status_str = status_map.get(post.status, "draft")
+        
         data = {
             "id": str(post.id),
+            "title": post.description,  # descriptionをtitleとして使用
+            "content": post.description,  # descriptionをcontentとして使用
             "description": post.description,
             "creator_user_id": str(post.creator_user_id),
-            "creator": AdminUserResponse.from_orm(post.creator) if post.creator else None,
-            "status": post.status,
+            "creator": AdminUserResponse.from_orm(post.creator) if hasattr(post, 'creator') and post.creator else None,
+            "status": status_str,
             "visibility": post.visibility,
+            "view_count": getattr(post, 'view_count', 0),
+            "like_count": getattr(post, 'like_count', 0),
             "created_at": post.created_at,
             "updated_at": post.updated_at,
         }
@@ -157,3 +173,23 @@ class CreateUserRequest(BaseModel):
     password: str
     display_name: str
     role: str
+
+class MediaAssetData(BaseModel):
+    kind: int
+    storage_key: str
+
+class AdminPostDetailResponse(BaseModel):
+    # 投稿情報
+    id: str
+    description: Optional[str]
+    status: int
+    created_at: Optional[str]
+    post_type: int
+    user_id: str
+    user_slug: str
+    profile_display_name: Optional[str]
+    profile_avatar_url: Optional[str]
+    media_assets: Dict[str, MediaAssetData]
+
+    class Config:
+        orm_mode = True

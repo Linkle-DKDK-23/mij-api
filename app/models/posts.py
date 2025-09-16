@@ -24,6 +24,7 @@ class Posts(Base):
     creator_user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=False)
     visibility: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    post_type: Mapped[int] = mapped_column(SmallInteger, nullable=True)
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     scheduled_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     expiration_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)

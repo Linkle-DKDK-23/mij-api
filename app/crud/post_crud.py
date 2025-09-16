@@ -15,6 +15,7 @@ from app.models.profiles import Profiles
 from app.models.media_assets import MediaAssets
 from app.models.plans import Plans, PostPlans   
 from app.models.prices import Prices
+from app.models.media_renditions import MediaRenditions
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
@@ -280,5 +281,66 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         "unpublished_posts": unpublished_posts,
         "deleted_posts": deleted_posts,
         "approved_posts": approved_posts
+    }
+
+def get_post_detail_by_id(db: Session, post_id: str) -> dict:
+    """
+    投稿詳細を取得（メディア情報とクリエイター情報を含む）
+    """
+    # 投稿を取得
+    post = db.query(Posts).filter(
+        Posts.id == post_id,
+        Posts.deleted_at.is_(None)
+    ).first()
+    
+    if not post:
+        return None
+    
+    # クリエイター情報を取得
+    creator = db.query(Users).filter(Users.id == post.creator_user_id).first()
+    creator_profile = db.query(Profiles).filter(Profiles.user_id == post.creator_user_id).first()
+    
+    # メディアアセットを取得
+    media_assets = db.query(MediaAssets).filter(
+        MediaAssets.post_id == post_id,
+        MediaAssets.status == 1  # アクティブなメディアのみ
+    ).all()
+    
+    # いいね数を取得
+    likes_count = db.query(func.count(Likes.post_id)).filter(
+        Likes.post_id == post_id
+    ).scalar() or 0
+    
+    # メディア情報を処理
+    video_rendition = None
+    thumbnail_key = None
+    duration = None
+    
+    for media_asset in media_assets:
+        # 動画メディアの場合（kind=5）
+        if media_asset.kind == 5:
+            # メディアレンディションを取得
+            renditions = db.query(MediaRenditions).filter(
+                MediaRenditions.asset_id == media_asset.id
+            ).first()  # 最初のレンディションを使用
+            
+            if renditions:
+                video_rendition = renditions.storage_key
+            
+            duration = media_asset.duration_sec
+        
+        # サムネイルの場合
+        elif media_asset.kind == MediaAssetKind.THUMBNAIL:
+            thumbnail_key = media_asset.storage_key
+    
+    return {
+        "post": post,
+        "creator": creator,
+        "creator_profile": creator_profile,
+        "video_rendition": video_rendition,
+        "thumbnail_key": thumbnail_key,
+        "duration": duration,
+        "likes_count": likes_count,
+        "media_assets": media_assets
     }
     

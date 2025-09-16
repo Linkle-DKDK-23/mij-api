@@ -46,6 +46,11 @@ class PostStatus:
     DELETED = 4 # 削除
     APPROVED = 5 # 公開
 
+# 投稿の種類
+class PostType:
+    VIDEO = 1 # ビデオ
+    IMAGE = 2 # 画像
+
 # 投稿の公開範囲
 class PostVisibility:
     SINGLE = 1 # 単品

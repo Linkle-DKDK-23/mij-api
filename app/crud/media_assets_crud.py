@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.media_assets import MediaAssets
 from app.models.posts import Posts
 from app.constants.enums import MediaAssetKind
+from app.constants.enums import PostType
 
 def create_media_asset(db: Session, media_asset_data: dict) -> MediaAssets:
     """
@@ -33,7 +34,7 @@ def get_media_asset_by_post_id(db: Session, post_id: str, type: str) -> MediaAss
         MediaAssets: メディアアセット（post情報も含む）
     """
 
-    if type == "video":
+    if type == PostType.VIDEO:
         kind = [
             MediaAssetKind.MAIN_VIDEO, 
             MediaAssetKind.SAMPLE_VIDEO, 

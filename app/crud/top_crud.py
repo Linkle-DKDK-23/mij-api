@@ -7,7 +7,7 @@ from app.models.social import Likes, Follows
 from app.models.user import Users
 from app.models.profiles import Profiles
 from app.models.media_assets import MediaAssets
-from app.constants.enums import AccountType, MediaAssetKind
+from app.constants.enums import AccountType, MediaAssetKind, PostStatus
 
 
 def get_top_genres(db: Session, limit: int = 8):
@@ -46,6 +46,7 @@ def get_ranking_posts(db: Session, limit: int = 5):
         .join(Users, Posts.creator_user_id == Users.id)
         .join(Profiles, Users.id == Profiles.user_id)
         .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .filter(Posts.status == PostStatus.APPROVED)
         .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc('likes_count'))
         .limit(limit)
@@ -109,6 +110,7 @@ def get_recent_posts(db: Session, limit: int = 5):
         .join(Users, Posts.creator_user_id == Users.id)
         .join(Profiles, Users.id == Profiles.user_id)
         .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == 2))
+        .filter(Posts.status == PostStatus.APPROVED)
         .order_by(desc(Posts.created_at))
         .limit(limit)
         .all()
