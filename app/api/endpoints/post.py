@@ -184,13 +184,18 @@ async def get_post_detail(
         if post_data["creator_profile"] and post_data["creator_profile"].avatar_url:
             creator_avatar = f"{cdn_base_url}/{post_data['creator_profile'].avatar_url}"
         
-        # 時間フォーマット（秒から mm:ss 形式に変換）
-        duration_formatted = "0:00"
-        if post_data["duration"]:
-            total_seconds = int(float(post_data["duration"]))
-            minutes = total_seconds // 60
-            seconds = total_seconds % 60
-            duration_formatted = f"{minutes}:{seconds:02d}"
+        
+        # カテゴリ情報を整形
+        categories_data = []
+        if post_data["categories"]:
+            categories_data = [
+                {
+                    "id": str(category.id),
+                    "name": category.name,
+                    "slug": category.slug
+                }
+                for category in post_data["categories"]
+            ]
         
         post_detail = {
             "id": str(post_data["post"].id),
@@ -198,7 +203,8 @@ async def get_post_detail(
             "description": post_data["post"].description,
             "video_url": video_url,
             "thumbnail": thumbnail_url,
-            "duration": duration_formatted,
+            "main_video_duration": post_data["main_video_duration"],
+            "sample_video_duration": post_data["sample_video_duration"],
             "views": 0,  # 別途ビュー数管理が必要な場合は実装
             "likes": post_data["likes_count"],
             "creator": {
@@ -206,6 +212,7 @@ async def get_post_detail(
                 "avatar": creator_avatar,
                 "verified": True  # 必要に応じて検証ロジックを追加
             },
+            "categories": categories_data,
             "created_at": post_data["post"].created_at.isoformat(),
             "updated_at": post_data["post"].updated_at.isoformat()
         }

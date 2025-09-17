@@ -5,7 +5,6 @@ from app.services.s3.media_covert import build_media_rendition_job_settings, bui
 from app.crud.media_assets_crud import get_media_asset_by_post_id
 from app.schemas.post_media import PoseMediaCovertRequest
 from app.services.s3.keygen import (
-    transcode_mc_key, 
     transcode_mc_hls_prefix, 
     transcode_mc_ffmpeg_key
 )
@@ -244,5 +243,5 @@ def transcode_mc_unified(
         raise
     except Exception as e:
         db.rollback()
-        print(f"Error: {e}")
+        print(f"メディアコンバート処理にてエラーが発生しました。: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

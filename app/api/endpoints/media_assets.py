@@ -29,18 +29,6 @@ KIND_MAPPING = {
     "sample": MediaAssetKind.SAMPLE_VIDEO,
 }
 
-@router.post("/")
-async def presign_post_media_video(
-    request: PostMediaVideoPresignRequest,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    try:
-        pass
-    except Exception as e:
-        print("アップロードURL生成エラーが発生しました", e)
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.post("/presign-image-upload")
 async def presign_post_media_image(
     request: PostMediaImagePresignRequest,

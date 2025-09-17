@@ -147,14 +147,6 @@ def build_preview_mp4_settings(input_key: str, output_key: str, usermeta: dict):
 def build_hls_abr4_settings(input_key: str, output_prefix: str, usermeta: dict):
     """
     HLS ABR4ジョブ作成
-
-    Args:
-        input_key (str): 入力キー
-        output_prefix (str): 出力プレフィックス
-        usermeta (dict): ユーザーメタデータ
-
-    Returns:
-        dict: ジョブ設定
     """
     input_s3 = f"s3://{INGEST_BUCKET}/{input_key}"
     dest     = f"s3://{MEDIA_BUCKET_NAME}/{output_prefix.strip('/')}/"
