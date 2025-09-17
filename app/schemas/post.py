@@ -15,6 +15,7 @@ class PostCreateRequest(BaseModel):
 	plan_ids: Optional[List[UUID]] = None
 	single: bool
 	price: Optional[int] = None
+	post_type: str
 
 
 class PostResponse(BaseModel):

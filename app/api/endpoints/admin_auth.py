@@ -8,6 +8,7 @@ from app.crud.user_crud import get_user_by_email
 from app.schemas.admin import AdminLoginRequest, AdminLoginResponse, AdminUserResponse
 from app.deps.auth import get_current_admin_user
 from app.models.user import Users
+from app.constants.enums import AccountType
 
 router = APIRouter()
 security = HTTPBearer()
@@ -35,7 +36,7 @@ async def admin_login(
         )
     
     # 管理者権限確認 (roleは数値: 1=user, 2=creator, 3=admin)
-    if user.role != 3:
+    if user.role != AccountType.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"

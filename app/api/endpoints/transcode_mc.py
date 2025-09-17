@@ -5,7 +5,6 @@ from app.services.s3.media_covert import build_media_rendition_job_settings, bui
 from app.crud.media_assets_crud import get_media_asset_by_post_id
 from app.schemas.post_media import PoseMediaCovertRequest
 from app.services.s3.keygen import (
-    transcode_mc_key, 
     transcode_mc_hls_prefix, 
     transcode_mc_ffmpeg_key
 )
@@ -24,6 +23,7 @@ from app.constants.enums import (
     MediaRenditionJobStatus,
     MediaRenditionKind,
     PostStatus,
+    PostType,
 )
 from app.crud.media_rendition_jobs_crud import create_media_rendition_job, update_media_rendition_job
 from app.crud.media_rendition_crud import create_media_rendition
@@ -31,10 +31,11 @@ from app.crud.post_crud import update_post_status
 import boto3
 from typing import Dict, Any, Optional
 
+
+
 S3 = boto3.client("s3", region_name="ap-northeast-1")
 
 router = APIRouter()
-
 
 def _create_media_convert_job(
     db: Session,
@@ -172,129 +173,75 @@ def _process_image_asset(
     return last_rendition
 
 
-@router.post("/transcode_mc")
-def transcode_mc(
-    request: PoseMediaCovertRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    投稿メディアコンバート（プレビューMP4）
-
-    Args:
-        post_id: str
-        db: Session
-
-    Returns:
-        dict: メディアコンバート結果
-    """
-    post_id = request.post_id
-    type = "video"
-    result = get_media_asset_by_post_id(db, post_id, type)
-    if not result:
-        raise HTTPException(status_code=404, detail="Media asset not found")
-
-    # 結果からメディアアセットとユーザーIDを取得
-    for row in result:
-        output_prefix = transcode_mc_key(
-            creator_id=row.creator_user_id,
-            post_id=row.post_id,
-            asset_id=row.id,
-        )
-
-        _create_media_convert_job(
-            db=db,
-            asset_row=row,
-            post_id=post_id,
-            job_kind=MediaRenditionJobKind.PREVIEW_MP4,
-            output_prefix=output_prefix,
-            usermeta_type="preview",
-            build_settings_func=build_media_rendition_job_settings
-        )
-
-    db.commit()
-    return {"status": "success"}
-
-
-@router.get("/transcode_mc_hls/{post_id}")
-def transcode_mc_hls(
+@router.post("/transcode_mc/{post_id}/{post_type}")
+def transcode_mc_unified(
     post_id: str = Path(..., description="Post ID"),
+    post_type: int = Path(..., description="Post Type"),
     db: Session = Depends(get_db)
 ):
     """
-    投稿メディアコンバート（HLS ABR4）
+    投稿メディアコンバート統合処理（HLS ABR4 + FFmpeg）
     
     Args:
         post_id: str
+        post_type: str
         db: Session
     
     Returns:
         dict: メディアコンバート結果
-    """
-    result = get_media_asset_by_post_id(db, post_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Media asset not found")
-
-    for row in result:
-        output_prefix = transcode_mc_hls_prefix(
-            creator_id=row.creator_user_id,
-            post_id=row.post_id,
-            asset_id=row.id,
-        )
-
-        _create_media_convert_job(
-            db=db,
-            asset_row=row,
-            post_id=post_id,
-            job_kind=MediaRenditionJobKind.HLS_ABR4,
-            output_prefix=output_prefix,
-            usermeta_type="final-hls",
-            build_settings_func=build_hls_abr4_settings
-        )
-
-    db.commit()
-    return {"status": "success"}
-
-
-@router.get("/transcode_mc_ffmpeg/{post_id}")
-def transcode_mc_ffmpeg(
-    post_id: str = Path(..., description="Post ID"),
-    db: Session = Depends(get_db),
-):
-    """
-    画像スクリーニング＋派生生成（ingest→media/public）。
-    既存のcopy_object実装を置き換え。
-    
-    Args:
-        post_id: str
-        db: Session
-    
-    Returns:
-        dict: 処理結果
     """
     try:
-        type = "image"
-        assets = get_media_asset_by_post_id(db, post_id, type)
+        # post_typeから処理タイプを決定
+        type_mapping = {
+            PostType.VIDEO: "video",  # 動画投稿
+            PostType.IMAGE: "image",  # 画像投稿
+        }
+        type = type_mapping.get(post_type, "video")  # デフォルトはvideo
+
+        # メディアアセットの取得
+        assets = get_media_asset_by_post_id(db, post_id, post_type)
         if not assets:
             raise HTTPException(status_code=404, detail="Media asset not found")
 
         last_rendition = None
 
         for row in assets:
-            last_rendition = _process_image_asset(db, row, post_id)
+            # HLS ABR4処理（ビデオの場合のみ）
+            if type == "video":
+                output_prefix = transcode_mc_hls_prefix(
+                    creator_id=row.creator_user_id,
+                    post_id=row.post_id,
+                    asset_id=row.id,
+                )
 
-        # 投稿を更新
+                _create_media_convert_job(
+                    db=db,
+                    asset_row=row,
+                    post_id=post_id,
+                    job_kind=MediaRenditionJobKind.HLS_ABR4,
+                    output_prefix=output_prefix,
+                    usermeta_type="final-hls",
+                    build_settings_func=build_hls_abr4_settings
+                )
+
+            # FFmpeg処理（画像の場合のみ）
+            if type == "image":
+                last_rendition = _process_image_asset(db, row, post_id)
+
+        # 投稿ステータスの更新
         post = update_post_status(db, post_id, PostStatus.APPROVED)
         db.commit()
+        
         if last_rendition:
             db.refresh(last_rendition)
             db.refresh(post)
 
-        return {"status": "ok"}
+        return {"status": True, "message": f"Media conversion completed for {type}"}
 
     except HTTPException:
         db.rollback()
         raise
     except Exception as e:
         db.rollback()
-        print(f"Error: {e}")
+        print(f"メディアコンバート処理にてエラーが発生しました。: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

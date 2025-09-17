@@ -3,6 +3,9 @@ from sqlalchemy.orm import Session
 from typing import Optional, Tuple
 import boto3
 import os
+import subprocess
+import tempfile
+from decimal import Decimal
 
 from app.crud.media_rendition_jobs_crud import update_media_rendition_job, get_media_rendition_job_by_id
 from app.crud.media_assets_crud import get_media_asset_by_id
@@ -151,6 +154,9 @@ def _handle_final_hls_completion(db: Session, webhook_data: dict) -> None:
     mime_type = MIME_TYPE_MAP.get(file_extension, "application/octet-stream")
     kind = _get_media_rendition_kind(file_extension)
     
+    # 動画の再生時間を取得
+    duration_sec = _get_video_duration(webhook_data["detail"], storage_key)
+    
     # メディアレンディションの作成
     media_rendition_data = {
         "asset_id": asset.id,
@@ -160,7 +166,7 @@ def _handle_final_hls_completion(db: Session, webhook_data: dict) -> None:
         "bytes": size_bytes or 0,
         "width": None,
         "height": None,
-        "duration_sec": None,
+        "duration_sec": duration_sec,
     }
     
     media_rendition = create_media_rendition(db, media_rendition_data)
@@ -303,3 +309,86 @@ def _get_media_rendition_kind(file_extension: str) -> MediaRenditionKind:
         return MediaRenditionKind.MP4
     else:
         return MediaRenditionKind.HLS_MASTER  # デフォルト
+
+
+def _get_video_duration(detail: dict, storage_key: str) -> Optional[Decimal]:
+    """
+    動画の再生時間を取得する
+    1. MediaConvertのイベントから取得を試行
+    2. 失敗した場合はFFmpegを使用してS3ファイルから取得
+    """
+    # 1. MediaConvertのイベントから取得を試行
+    duration_ms = _extract_duration_from_event(detail)
+    if duration_ms is not None:
+        return Decimal(str(duration_ms / 1000.0))  # ミリ秒を秒に変換
+    
+    # 2. FFmpegを使用してS3ファイルから取得
+    try:
+        return _get_duration_with_ffmpeg(storage_key)
+    except Exception as e:
+        print(f"Failed to get video duration: {e}")
+        return None
+
+
+def _extract_duration_from_event(detail: dict) -> Optional[int]:
+    """
+    MediaConvertのイベントから動画の再生時間を抽出する
+    """
+    try:
+        # MediaConvertの完了イベントからdurationInMsを取得
+        output_groups = detail.get("outputGroupDetails", [])
+        
+        for output_group in output_groups:
+            for output_detail in output_group.get("outputDetails", []):
+                # durationInMsフィールドを確認
+                duration_ms = output_detail.get("durationInMs")
+                if duration_ms is not None:
+                    return duration_ms
+        
+        # フォールバック: ジョブ全体のduration
+        job_duration = detail.get("durationInMs")
+        if job_duration is not None:
+            return job_duration
+            
+        return None
+    except Exception:
+        return None
+
+
+def _get_duration_with_ffmpeg(storage_key: str) -> Optional[Decimal]:
+    """
+    FFmpegを使用してS3ファイルから動画の再生時間を取得する
+    """
+    try:
+        # S3から一時ファイルにダウンロード
+        with tempfile.NamedTemporaryFile(suffix=_get_file_extension(storage_key)) as temp_file:
+            # S3からファイルをダウンロード
+            s3_client.download_file(MEDIA_BUCKET_NAME, storage_key, temp_file.name)
+            
+            # FFmpegでメタデータを取得
+            cmd = [
+                "ffprobe",
+                "-v", "quiet",
+                "-print_format", "json",
+                "-show_format",
+                temp_file.name
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            
+            # JSONを解析してdurationを取得
+            import json
+            metadata = json.loads(result.stdout)
+            duration_str = metadata["format"].get("duration")
+            
+            if duration_str:
+                return Decimal(duration_str)
+            
+            return None
+            
+    except subprocess.CalledProcessError as e:
+        print(f"FFprobe error: {e}")
+        return None
+    except Exception as e:
+        print(f"Error getting duration with FFmpeg: {e}")
+        return None

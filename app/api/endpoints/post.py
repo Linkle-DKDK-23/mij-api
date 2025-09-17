@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.deps.auth import get_current_user
 from app.schemas.post import PostCreateRequest, PostResponse
-from app.constants.enums import PostVisibility
-from app.crud.post_crud import create_post
+from app.constants.enums import PostVisibility, PostType
+from app.crud.post_crud import create_post, get_post_detail_by_id
 from app.crud.plan_crud import create_plan
 from app.crud.price_crud import create_price
 from app.constants.enums import PlanStatus, PriceType
@@ -13,8 +13,15 @@ from app.crud.tags_crud import exit_tag, create_tag
 from app.crud.post_tags_crud import create_post_tag
 from app.crud.post_categories_crud import create_post_category
 from app.models.tags import Tags
+import os
 
 router = APIRouter()
+
+# PostTypeの文字列からenumへのマッピングを定義
+POST_TYPE_MAPPING = {
+    "video": PostType.VIDEO,
+    "image": PostType.IMAGE,
+}
 
 @router.post("/create", response_model=PostResponse)
 async def create_post_endpoint(
@@ -33,6 +40,7 @@ async def create_post_endpoint(
 
         expiration_at = post_create.expirationDate if post_create.expiration else None
         scheduled_at = post_create.formattedScheduledDateTime if post_create.scheduled else None
+        post_type = POST_TYPE_MAPPING.get(post_create.post_type)
 
         # postテーブル用にデータを整形
         post_data = {
@@ -41,6 +49,7 @@ async def create_post_endpoint(
             "scheduled_at": scheduled_at,
             "expiration_at": expiration_at,
             "visibility": visibility,
+            "post_type": post_type,
         }
 
         # 投稿作成
@@ -152,8 +161,66 @@ async def get_post_detail(
     db: Session = Depends(get_db)
 ):
     try:
-        # post = db.query(Posts).filter(Posts.id == post_id).first()
-        return post_id
+        # CRUD関数を使用して投稿詳細を取得
+        post_data = get_post_detail_by_id(db, post_id)
+        
+        if not post_data:
+            raise HTTPException(status_code=404, detail="投稿が見つかりません")
+        
+        # 環境変数から設定を取得
+        media_cdn_url = os.getenv("MEDIA_CDN_URL", "")
+        cdn_base_url = os.getenv("CDN_BASE_URL", "")
+        
+        # レスポンス用のデータを構築
+        video_url = None
+        if post_data["video_rendition"]:
+            video_url = f"{media_cdn_url}/{post_data['video_rendition']}"
+        
+        thumbnail_url = None
+        if post_data["thumbnail_key"]:
+            thumbnail_url = f"{cdn_base_url}/{post_data['thumbnail_key']}"
+        
+        creator_avatar = None
+        if post_data["creator_profile"] and post_data["creator_profile"].avatar_url:
+            creator_avatar = f"{cdn_base_url}/{post_data['creator_profile'].avatar_url}"
+        
+        
+        # カテゴリ情報を整形
+        categories_data = []
+        if post_data["categories"]:
+            categories_data = [
+                {
+                    "id": str(category.id),
+                    "name": category.name,
+                    "slug": category.slug
+                }
+                for category in post_data["categories"]
+            ]
+        
+        post_detail = {
+            "id": str(post_data["post"].id),
+            "title": post_data["post"].description or "無題",
+            "description": post_data["post"].description,
+            "video_url": video_url,
+            "thumbnail": thumbnail_url,
+            "main_video_duration": post_data["main_video_duration"],
+            "sample_video_duration": post_data["sample_video_duration"],
+            "views": 0,  # 別途ビュー数管理が必要な場合は実装
+            "likes": post_data["likes_count"],
+            "creator": {
+                "name": post_data["creator_profile"].display_name if post_data["creator_profile"] else post_data["creator"].email,
+                "avatar": creator_avatar,
+                "verified": True  # 必要に応じて検証ロジックを追加
+            },
+            "categories": categories_data,
+            "created_at": post_data["post"].created_at.isoformat(),
+            "updated_at": post_data["post"].updated_at.isoformat()
+        }
+        
+        return post_detail
+        
+    except HTTPException:
+        raise
     except Exception as e:
         print("投稿詳細取得エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))

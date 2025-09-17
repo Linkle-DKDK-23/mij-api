@@ -9,10 +9,10 @@ from .client import (
     IDENTITY_BUCKET,
 )
 
-Resource = Literal["video", "identity", "public"]
+Resource = Literal["examination", "identity", "public"]
 
 def _bucket_and_kms(resource: Resource):
-    if resource == "video":
+    if resource == "examination":
         return INGEST_BUCKET, KMS_ALIAS_INGEST
     elif resource == "identity":
         return IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
@@ -71,20 +71,23 @@ def presign_put(
 def presign_get(
     resource: Resource,
     key: str,
-    expires_in: int = 900,
-    response_inline: bool = True,
-    filename: Optional[str] = None,
-    response_content_type: Optional[str] = None
+    expires_in: int = 43200,
+    filename: str | None = None,
+    inline: bool = True,
+    content_type: str | None = None,
 ) -> dict:
-    bucket, _ = _bucket_and_kms(resource)
+    bucket, _alias = _bucket_and_kms(resource)
     client = s3_client()
 
     params = {"Bucket": bucket, "Key": key}
-    if response_content_type:
-        params["ResponseContentType"] = response_content_type
+
+    # ブラウザ表示/再生を安定させたい場合は指定（S3に正しいContent-Typeが付いていれば省略可）
+    if content_type:
+        params["ResponseContentType"] = content_type
+
     if filename:
-        disp = "inline" if response_inline else "attachment"
-        params["ResponseContentDisposition"] = f'{disp}; filename="{filename}"'
+        dispo = "inline" if inline else "attachment"
+        params["ResponseContentDisposition"] = f'{dispo}; filename="{filename}"'
 
     url = client.generate_presigned_url(
         "get_object",
