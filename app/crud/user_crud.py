@@ -126,8 +126,7 @@ def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
         .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
         .filter(Posts.creator_user_id == user.id)
         .filter(Posts.deleted_at.is_(None))
-        # TODO: アップロードされている動画を取得
-        # .filter(Posts.status == PostStatus.APPROVED)
+        .filter(Posts.status == PostStatus.APPROVED)
         .group_by(Posts.id, MediaAssets.storage_key)  # GROUP BY句を追加
         .order_by(desc(Posts.created_at))
         .all()
@@ -150,8 +149,7 @@ def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
         .filter(Posts.deleted_at.is_(None))
         .filter(Plans.type == PlanStatus.SINGLE)  # typeが1（SINGLE）のもののみ
         .filter(Plans.deleted_at.is_(None))  # 削除されていないプランのみ
-        # TODO: アップロードされている動画を取得
-        # .filter(Posts.status == PostStatus.APPROVED)
+        .filter(Posts.status == PostStatus.APPROVED)
         .group_by(Posts.id, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()

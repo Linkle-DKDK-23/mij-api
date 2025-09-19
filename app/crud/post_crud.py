@@ -17,6 +17,7 @@ from app.models.plans import Plans, PostPlans
 from app.models.prices import Prices
 from app.models.media_renditions import MediaRenditions
 from app.api.commons.utils import get_video_duration
+from app.constants.enums import PlanStatus
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
@@ -286,7 +287,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
 
 def get_post_detail_by_id(db: Session, post_id: str) -> dict:
     """
-    投稿詳細を取得（メディア情報とクリエイター情報、カテゴリ情報を含む）
+    投稿詳細を取得（メディア情報とクリエイター情報、カテゴリ情報、販売情報を含む）
     """
     # 投稿を取得
     post = db.query(Posts).filter(
@@ -302,9 +303,7 @@ def get_post_detail_by_id(db: Session, post_id: str) -> dict:
     creator_profile = db.query(Profiles).filter(Profiles.user_id == post.creator_user_id).first()
     
     # メディアアセットを取得
-    media_assets = db.query(MediaAssets).filter(
-        MediaAssets.post_id == post_id,
-    ).all()
+    media_assets = db.query(MediaAssets).filter(MediaAssets.post_id == post_id).all()
     
     # カテゴリ情報を取得
     categories = (
@@ -316,9 +315,50 @@ def get_post_detail_by_id(db: Session, post_id: str) -> dict:
     )
     
     # いいね数を取得
-    likes_count = db.query(func.count(Likes.post_id)).filter(
-        Likes.post_id == post_id
-    ).scalar() or 0
+    likes_count = db.query(func.count(Likes.post_id)).filter(Likes.post_id == post_id).scalar() or 0
+    
+    # 販売情報を取得
+    post_plans = (
+        db.query(PostPlans, Plans, Prices)
+        .join(Plans, PostPlans.plan_id == Plans.id)
+        .join(Prices, Plans.id == Prices.plan_id)
+        .filter(PostPlans.post_id == post_id)
+        .filter(Plans.status == 1)
+        .filter(Prices.status == 1)
+        .all()
+    )
+    
+    # 販売タイプと金額を判定
+    sale_type = "free"  # デフォルトは無料
+    single = None
+    subscription = None
+    
+    if post_plans:
+        has_single = any(plan.type == PlanStatus.SINGLE for _, plan, _ in post_plans)
+        has_subscription = any(plan.type == PlanStatus.PLAN for _, plan, _ in post_plans)
+        
+        if has_single and has_subscription:
+            sale_type = "both"
+        elif has_single:
+            sale_type = "single"
+        elif has_subscription:
+            sale_type = "subscription"
+        
+        # 金額を取得（最初に見つかった価格を使用）
+        for _, plan, price in post_plans:
+            if plan.type == PlanStatus.SINGLE and single is None:  # 単品販売
+                single = {
+                    "amount": price.price,
+                    "currency": price.currency
+                }
+            elif plan.type == PlanStatus.PLAN and subscription is None:  # プラン販売
+                subscription = {
+                    "amount": price.price,
+                    "currency": price.currency,
+                    "interval": price.interval,
+                    "plan_name": plan.name,
+                    "plan_description": plan.description,
+                }
     
     # メディア情報を処理
     video_rendition = None
@@ -354,6 +394,9 @@ def get_post_detail_by_id(db: Session, post_id: str) -> dict:
         "sample_video_duration": sample_video_duration,
         "likes_count": likes_count,
         "media_assets": media_assets,
-        "categories": categories
+        "categories": categories,
+        "sale_type": sale_type,
+        "single": single,
+        "subscription": subscription
     }
     

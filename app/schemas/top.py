@@ -16,6 +16,7 @@ class RankingPostResponse(BaseModel):
     display_name: str
     creator_avatar_url: Optional[str] = None
     rank: int
+    duration: Optional[str] = None
 
 class CreatorResponse(BaseModel):
     id: str
@@ -32,6 +33,7 @@ class RecentPostResponse(BaseModel):
     creator_name: str
     display_name: str
     creator_avatar_url: Optional[str] = None
+    duration: Optional[str] = None
 
 class TopPageResponse(BaseModel):
     genres: List[GenreResponse]

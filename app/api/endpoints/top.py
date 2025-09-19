@@ -10,6 +10,7 @@ from app.crud.top_crud import (
     get_new_creators, get_recent_posts
 )
 from os import getenv
+from app.api.commons.utils import get_video_duration
 
 router = APIRouter()
 
@@ -42,7 +43,8 @@ def get_top_page_data(db: Session = Depends(get_db)):
                 creator_name=p.slug,
                 display_name=p.display_name,
                 creator_avatar_url=f"{BASE_URL}/{p.avatar_url}" if p.avatar_url else None,
-                rank=idx + 1
+                rank=idx + 1,
+                duration=get_video_duration(p.duration_sec) if p.duration_sec else None
             ) for idx, p in enumerate(ranking_posts)],
             top_creators=[CreatorResponse(
                 id=str(c.Users.id),
@@ -65,7 +67,8 @@ def get_top_page_data(db: Session = Depends(get_db)):
                 thumbnail_url=f"{BASE_URL}/{p.thumbnail_key}" if p.thumbnail_key else None,
                 creator_name=p.slug,
                 display_name=p.display_name,
-                creator_avatar_url=f"{BASE_URL}/{p.avatar_url}" if p.avatar_url else None
+                creator_avatar_url=f"{BASE_URL}/{p.avatar_url}" if p.avatar_url else None,
+                duration=get_video_duration(p.duration_sec) if p.duration_sec else None
             ) for p in recent_posts]
         )
     except Exception as e:
