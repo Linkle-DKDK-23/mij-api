@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, desc
 from app.models.categories import Categories
 from app.models.post_categories import PostCategories
@@ -7,8 +7,12 @@ from app.models.social import Likes, Follows
 from app.models.user import Users
 from app.models.profiles import Profiles
 from app.models.media_assets import MediaAssets
+from app.models.media_renditions import MediaRenditions
 from app.constants.enums import AccountType, MediaAssetKind, PostStatus
 
+# エイリアスを定義
+ThumbnailAssets = aliased(MediaAssets)
+VideoAssets = aliased(MediaAssets)
 
 def get_top_genres(db: Session, limit: int = 8):
     """
@@ -40,14 +44,27 @@ def get_ranking_posts(db: Session, limit: int = 5):
             Users.slug,
             Profiles.display_name,
             Profiles.avatar_url,
-            MediaAssets.storage_key.label('thumbnail_key')
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            MediaRenditions.duration_sec.label('duration_sec')
         )
         .outerjoin(Likes, Posts.id == Likes.post_id)
         .join(Users, Posts.creator_user_id == Users.id)
         .join(Profiles, Users.id == Profiles.user_id)
-        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        # サムネイル用のMediaAssets（kind=2）
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        # メインビデオ用のMediaAssets（kind=4）
+        .outerjoin(VideoAssets, (Posts.id == VideoAssets.post_id) & (VideoAssets.kind == MediaAssetKind.MAIN_VIDEO))
+        # メインビデオのMediaRenditions
+        .outerjoin(MediaRenditions, VideoAssets.id == MediaRenditions.asset_id)
         .filter(Posts.status == PostStatus.APPROVED)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(
+            Posts.id, 
+            Users.slug, 
+            Profiles.display_name, 
+            Profiles.avatar_url, 
+            ThumbnailAssets.storage_key, 
+            MediaRenditions.duration_sec
+        )
         .order_by(desc('likes_count'))
         .limit(limit)
         .all()
@@ -105,11 +122,17 @@ def get_recent_posts(db: Session, limit: int = 5):
             Users.slug,
             Profiles.display_name,
             Profiles.avatar_url,
-            MediaAssets.storage_key.label('thumbnail_key')
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            MediaRenditions.duration_sec.label('duration_sec')
         )
         .join(Users, Posts.creator_user_id == Users.id)
         .join(Profiles, Users.id == Profiles.user_id)
-        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == 2))
+        # サムネイル用のMediaAssets（kind=2）
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        # メインビデオ用のMediaAssets（kind=4）
+        .outerjoin(VideoAssets, (Posts.id == VideoAssets.post_id) & (VideoAssets.kind == MediaAssetKind.MAIN_VIDEO))
+        # メインビデオのMediaRenditions
+        .outerjoin(MediaRenditions, VideoAssets.id == MediaRenditions.asset_id)
         .filter(Posts.status == PostStatus.APPROVED)
         .order_by(desc(Posts.created_at))
         .limit(limit)

@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, exists
 from app.models.posts import Posts
 from app.models.social import Likes
 from uuid import UUID
@@ -17,6 +17,8 @@ from app.models.plans import Plans, PostPlans
 from app.models.prices import Prices
 from app.models.media_renditions import MediaRenditions
 from app.api.commons.utils import get_video_duration
+from app.constants.enums import PlanStatus
+from app.models.purchases import Purchases
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
@@ -284,43 +286,135 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         "approved_posts": approved_posts
     }
 
-def get_post_detail_by_id(db: Session, post_id: str) -> dict:
+def get_post_detail_by_id(db: Session, post_id: str, user_id: str) -> dict:
     """
-    投稿詳細を取得（メディア情報とクリエイター情報、カテゴリ情報を含む）
+    投稿詳細を取得（メディア情報とクリエイター情報、カテゴリ情報、販売情報を含む）
     """
-    # 投稿を取得
+    # 投稿とクリエイター情報を取得
+    post, creator, creator_profile = _get_post_and_creator_info(db, post_id)
+    if not post:
+        return None
+    
+    # 各種情報を取得
+    categories = _get_post_categories(db, post_id)
+    likes_count = _get_likes_count(db, post_id)
+    sale_info = _get_sale_info(db, post_id)
+    media_info = _get_media_info(db, post_id, user_id)
+    
+    # 結果を統合して返却
+    return {
+        "post": post,
+        "creator": creator,
+        "creator_profile": creator_profile,
+        "categories": categories,
+        "likes_count": likes_count,
+        **sale_info,
+        **media_info
+    }
+    
+def _is_purchased(db: Session, user_id: UUID, post_id: UUID) -> bool:
+    """
+    ユーザーが投稿を購入しているかどうかを判定
+    
+    Args:
+        db (Session): データベースセッション
+        user_id (UUID): ユーザーID
+        post_id (UUID): 投稿ID
+        
+    Returns:
+        bool: 購入済みの場合True、未購入の場合False
+    """
+    return db.query(exists().where(
+        Purchases.user_id == user_id,
+        Purchases.post_id == post_id,
+        Purchases.deleted_at.is_(None)  # 削除されていない購入のみ
+    )).scalar()
+
+def _get_post_and_creator_info(db: Session, post_id: str) -> tuple:
+    """投稿とクリエイター情報を取得"""
     post = db.query(Posts).filter(
         Posts.id == post_id,
         Posts.deleted_at.is_(None)
     ).first()
     
     if not post:
-        return None
+        return None, None, None
     
-    # クリエイター情報を取得
     creator = db.query(Users).filter(Users.id == post.creator_user_id).first()
     creator_profile = db.query(Profiles).filter(Profiles.user_id == post.creator_user_id).first()
     
-    # メディアアセットを取得
-    media_assets = db.query(MediaAssets).filter(
-        MediaAssets.post_id == post_id,
-    ).all()
-    
-    # カテゴリ情報を取得
-    categories = (
+    return post, creator, creator_profile
+
+def _get_post_categories(db: Session, post_id: str) -> list:
+    """投稿のカテゴリ情報を取得"""
+    return (
         db.query(Categories)
         .join(PostCategories, Categories.id == PostCategories.category_id)
         .filter(PostCategories.post_id == post_id)
         .filter(Categories.is_active == True)
         .all()
     )
+
+def _get_likes_count(db: Session, post_id: str) -> int:
+    """投稿のいいね数を取得"""
+    return db.query(func.count(Likes.post_id)).filter(Likes.post_id == post_id).scalar() or 0
+
+def _get_sale_info(db: Session, post_id: str) -> dict:
+    """販売情報を取得・判定"""
+    post_plans = (
+        db.query(PostPlans, Plans, Prices)
+        .join(Plans, PostPlans.plan_id == Plans.id)
+        .join(Prices, Plans.id == Prices.plan_id)
+        .filter(PostPlans.post_id == post_id)
+        .filter(Plans.status == 1)
+        .filter(Prices.status == 1)
+        .all()
+    )
     
-    # いいね数を取得
-    likes_count = db.query(func.count(Likes.post_id)).filter(
-        Likes.post_id == post_id
-    ).scalar() or 0
+    sale_type = "free"
+    single = None
+    subscription = None
     
-    # メディア情報を処理
+    if post_plans:
+        has_single = any(plan.type == PlanStatus.SINGLE for _, plan, _ in post_plans)
+        has_subscription = any(plan.type == PlanStatus.PLAN for _, plan, _ in post_plans)
+        
+        if has_single and has_subscription:
+            sale_type = "both"
+        elif has_single:
+            sale_type = "single"
+        elif has_subscription:
+            sale_type = "subscription"
+        
+        # 金額を取得
+        for _, plan, price in post_plans:
+            if plan.type == PlanStatus.SINGLE and single is None:
+                single = {
+                    "id": plan.id,
+                    "amount": price.price,
+                    "currency": price.currency
+                }
+            elif plan.type == PlanStatus.PLAN and subscription is None:
+                subscription = {
+                    "id": plan.id,
+                    "amount": price.price,
+                    "currency": price.currency,
+                    "interval": price.interval,
+                    "plan_name": plan.name,
+                    "plan_description": plan.description,
+                }
+    
+    return {
+        "sale_type": sale_type,
+        "single": single,
+        "subscription": subscription
+    }
+
+def _get_media_info(db: Session, post_id: str, user_id: str) -> dict:
+    """メディア情報を取得・処理"""
+    media_assets = db.query(MediaAssets).filter(MediaAssets.post_id == post_id).all()
+    purchased = _is_purchased(db, user_id, post_id)
+    
     video_rendition = None
     thumbnail_key = None
     main_video_duration = None
@@ -330,13 +424,16 @@ def get_post_detail_by_id(db: Session, post_id: str) -> dict:
         if media_asset.kind == MediaAssetKind.THUMBNAIL:
             thumbnail_key = media_asset.storage_key
         elif media_asset.kind in [MediaAssetKind.MAIN_VIDEO, MediaAssetKind.SAMPLE_VIDEO]:
-            # メディアレンディションを取得
             renditions = db.query(MediaRenditions).filter(
                 MediaRenditions.asset_id == media_asset.id
             ).first()
             
             if renditions:
-                video_rendition = renditions.storage_key
+                # 購入状況に応じて適切な動画を設定
+                if purchased and media_asset.kind == MediaAssetKind.MAIN_VIDEO:
+                    video_rendition = renditions.storage_key
+                elif not purchased and media_asset.kind == MediaAssetKind.SAMPLE_VIDEO:
+                    video_rendition = renditions.storage_key
                 
                 # 動画の種類に応じてdurationを設定
                 if media_asset.kind == MediaAssetKind.MAIN_VIDEO:
@@ -345,15 +442,10 @@ def get_post_detail_by_id(db: Session, post_id: str) -> dict:
                     sample_video_duration = get_video_duration(renditions.duration_sec)
     
     return {
-        "post": post,
-        "creator": creator,
-        "creator_profile": creator_profile,
         "video_rendition": video_rendition,
         "thumbnail_key": thumbnail_key,
         "main_video_duration": main_video_duration,
         "sample_video_duration": sample_video_duration,
-        "likes_count": likes_count,
-        "media_assets": media_assets,
-        "categories": categories
+        "purchased": purchased,
+        "media_assets": media_assets
     }
-    

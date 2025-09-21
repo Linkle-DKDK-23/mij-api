@@ -3,7 +3,8 @@ from fastapi import APIRouter
 from app.api.endpoints import (
     identity, media_assets, videos, users, auth,
     creater, gender, account, plans, categories, post,
-    transcode_mc, top, category, ranking, social, admin, admin_auth
+    transcode_mc, top, category, ranking, social, admin, admin_auth,
+    purchases
 )
 from app.api.hook.webhooks import router as webhooks_router
 
@@ -26,6 +27,7 @@ api_router.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"]
 api_router.include_router(category.router, prefix="/category", tags=["Category"])
 api_router.include_router(ranking.router, prefix="/ranking", tags=["Ranking"])
 api_router.include_router(social.router, prefix="/social", tags=["Social"])
+api_router.include_router(purchases.router, prefix="/purchases", tags=["Purchases"])
 
 # Admin routes
 api_router.include_router(admin_auth.router, prefix="/admin/auth", tags=["Admin Auth"])
