@@ -100,7 +100,7 @@ async def get_post_detail(
 ):
     try:
         # CRUD関数を使用して投稿詳細を取得
-        post_data = get_post_detail_by_id(db, post_id)
+        post_data = get_post_detail_by_id(db, post_id, user.id)
         
         if not post_data:
             raise HTTPException(status_code=404, detail="投稿が見つかりません")
@@ -139,6 +139,7 @@ async def get_post_detail(
             "id": str(post_data["post"].id),
             "title": post_data["post"].description or "無題",
             "description": post_data["post"].description,
+            "purchased": post_data["purchased"],
             "video_url": video_url,
             "thumbnail": thumbnail_url,
             "main_video_duration": post_data["main_video_duration"],
