@@ -16,7 +16,7 @@ from app.services.s3.image_screening import (
     _moderation_check,
     _make_variant_keys,
 )
-from app.services.s3.client import s3_client_for_mc, ENV, s3_client, MEDIA_BUCKET_NAME, INGEST_BUCKET, KMS_ALIAS_MEDIA
+from app.services.s3.client import s3_client_for_mc, ENV, MEDIA_BUCKET_NAME, INGEST_BUCKET
 from app.constants.enums import (
     MediaRenditionJobKind, 
     MediaRenditionJobBackend, 

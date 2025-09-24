@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Generic, TypeVar, Dict
-from pydantic import BaseModel
-from pydantic.generics import GenericModel
+from pydantic import BaseModel, ConfigDict
 import os
 
 CDN_URL = os.getenv("CDN_BASE_URL")
@@ -9,7 +8,7 @@ CDN_URL = os.getenv("CDN_BASE_URL")
 # Generic type for paginated responses
 T = TypeVar('T')
 
-class PaginatedResponse(GenericModel, Generic[T]):
+class PaginatedResponse(BaseModel, Generic[T]):
     data: List[T]
     total: int
     page: int
@@ -26,6 +25,8 @@ class AdminDashboardStats(BaseModel):
     active_subscriptions: int
 
 class AdminUserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: str
     email: Optional[str]
     role: str  # フロントエンド表示用に文字列として提供
@@ -36,9 +37,6 @@ class AdminUserResponse(BaseModel):
     # Profileから取得するフィールド
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
-
-    class Config:
-        orm_mode = True
 
     @classmethod
     def from_orm(cls, user):
@@ -59,14 +57,13 @@ class AdminUserResponse(BaseModel):
         return cls(**data)
 
 class AdminCreatorApplicationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     user_id: str
     user: AdminUserResponse
     status: int
     name: Optional[str]
     created_at: datetime
-    
-    class Config:
-        orm_mode = True
 
     @classmethod
     def from_orm(cls, creator):
@@ -84,15 +81,14 @@ class CreatorApplicationReview(BaseModel):
     notes: Optional[str]
 
 class AdminIdentityVerificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: str
     user_id: str
     user: AdminUserResponse
     status: int
     checked_at: Optional[datetime]
     notes: Optional[str]
-
-    class Config:
-        orm_mode = True
 
     @classmethod
     def from_orm(cls, verification):
@@ -111,6 +107,8 @@ class IdentityVerificationReview(BaseModel):
     notes: Optional[str]
 
 class AdminPostResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: str
     title: Optional[str]  # フロントエンド側の期待に合わせてtitleフィールドを追加
     content: Optional[str]  # フロントエンド側の期待に合わせてcontentフィールドを追加
@@ -123,9 +121,6 @@ class AdminPostResponse(BaseModel):
     like_count: int = 0  # フロントエンド側で期待されるフィールドを追加
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        orm_mode = True
 
     @classmethod
     def from_orm(cls, post):
@@ -150,14 +145,13 @@ class AdminPostResponse(BaseModel):
         return cls(**data)
 
 class AdminSalesData(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     period: str
     total_revenue: float
     platform_revenue: float
     creator_revenue: float
     transaction_count: int
-
-    class Config:
-        orm_mode = True
 
 # Auth schemas for admin
 class AdminLoginRequest(BaseModel):
@@ -179,6 +173,8 @@ class MediaAssetData(BaseModel):
     storage_key: str
 
 class AdminPostDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     # 投稿情報
     id: str
     description: Optional[str]
@@ -190,6 +186,3 @@ class AdminPostDetailResponse(BaseModel):
     profile_display_name: Optional[str]
     profile_avatar_url: Optional[str]
     media_assets: Dict[str, MediaAssetData]
-
-    class Config:
-        orm_mode = True

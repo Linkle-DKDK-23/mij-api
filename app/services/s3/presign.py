@@ -4,18 +4,18 @@ from .client import (
     s3_client, 
     INGEST_BUCKET,
     KMS_ALIAS_INGEST,
-    KMS_ALIAS_IDENTITY, 
     ASSETS_BUCKET_NAME,
-    IDENTITY_BUCKET,
+    KYC_BUCKET_NAME,
+    KMS_ALIAS_KYC, 
 )
 
-Resource = Literal["examination", "identity", "public"]
+Resource = Literal["ingest", "identity", "public"]
 
 def _bucket_and_kms(resource: Resource):
-    if resource == "examination":
+    if resource == "ingest":
         return INGEST_BUCKET, KMS_ALIAS_INGEST
     elif resource == "identity":
-        return IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
+        return KYC_BUCKET_NAME, KMS_ALIAS_KYC
     elif resource == "public":
         return ASSETS_BUCKET_NAME
     raise ValueError("unknown resource")

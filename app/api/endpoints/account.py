@@ -53,8 +53,8 @@ def get_account_info(
         return AccountInfoResponse(
             slug=current_user.slug or "",
             display_name=profile.display_name if profile else "",
-            avatar_url=profile.avatar_url if profile else None,
-            cover_url=profile.cover_url if profile else None,
+            avatar_url=f"{BASE_URL}/{profile.avatar_url}" if profile and profile.avatar_url else None,
+            cover_url=f"{BASE_URL}/{profile.cover_url}" if profile and profile.cover_url else None,
             followers_count=follower_data["followers_count"] if follower_data else 0,
             following_count=follower_data["following_count"] if follower_data else 0,
             total_likes=total_likes or 0,
