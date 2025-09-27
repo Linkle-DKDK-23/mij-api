@@ -20,6 +20,10 @@ from app.crud.gender_crud import get_genders, get_gender_by_slug
 from app.crud.followes_crud import get_follower_count
 from app.models.creator_type import CreatorType
 from app.crud.post_crud import get_total_likes_by_user_id, get_posts_count_by_user_id
+from app.crud.creater_crud import get_creators
+from typing import List
+from os import getenv
+BASE_URL = getenv("CDN_BASE_URL")
 
 router = APIRouter()
 
@@ -159,4 +163,21 @@ def get_creator_profile(
         }
     except Exception as e:
         print("クリエイタープロフィール取得エラー: ", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/list" , response_model=List)
+def get_creator_list(
+    db: Session = Depends(get_db)
+):
+    try:
+        creators = get_creators(db, limit=50)
+        return [{
+            "id": str(creator.id),
+            "name": creator.slug,
+            "display_name": creator.display_name,
+            "followers_count": creator.followers_count,
+            "avatar_url": f"{BASE_URL}/{creator.avatar_url}" if creator.avatar_url else None
+        } for creator in creators]
+    except Exception as e:
+        print("クリエイター一覧取得エラー: ", e)
         raise HTTPException(status_code=500, detail=str(e))

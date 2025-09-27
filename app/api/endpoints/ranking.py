@@ -25,10 +25,10 @@ async def get_ranking(
     db: Session = Depends(get_db),
 ):
     try:
-        ranking_posts_all_time = get_ranking_posts_all_time(db, limit=5)
-        ranking_posts_monthly = get_ranking_posts_monthly(db, limit=5)
-        ranking_posts_weekly = get_ranking_posts_weekly(db, limit=5)
-        ranking_posts_daily = get_ranking_posts_daily(db, limit=5)
+        ranking_posts_all_time = get_ranking_posts_all_time(db, limit=50)
+        ranking_posts_monthly = get_ranking_posts_monthly(db, limit=50)
+        ranking_posts_weekly = get_ranking_posts_weekly(db, limit=50)
+        ranking_posts_daily = get_ranking_posts_daily(db, limit=50)
 
         return RankingResponse(
             all_time=[RankingPostsAllTimeResponse(

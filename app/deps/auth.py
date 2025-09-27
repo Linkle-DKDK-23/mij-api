@@ -27,6 +27,24 @@ def get_current_user(
     return user
 
 
+def get_current_user_optional(
+    db: Session = Depends(get_db),
+    access_token: str | None = Cookie(default=None, alias=ACCESS_COOKIE),
+):
+    """オプショナル認証 - トークンがない場合はNoneを返す"""
+    if not access_token:
+        return None
+    try:
+        payload = decode_token(access_token)
+        if payload.get("type") != "access":
+            return None
+        user_id = payload.get("sub")
+        user = get_user_by_id(db, user_id)
+        return user
+    except Exception:
+        return None
+
+
 def get_current_admin_user(
     db: Session = Depends(get_db),
     authorization: str = Header(None),

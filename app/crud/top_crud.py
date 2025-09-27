@@ -112,7 +112,7 @@ def get_new_creators(db: Session, limit: int = 5):
     )
 
 
-def get_recent_posts(db: Session, limit: int = 5):
+def get_recent_posts(db: Session, limit: int = 50):
     """
     最新の投稿を取得
     """

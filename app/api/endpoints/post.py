@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.base import get_db
-from app.deps.auth import get_current_user
-from app.schemas.post import PostCreateRequest, PostResponse
+from app.deps.auth import get_current_user_optional
+from app.schemas.post import PostCreateRequest, PostResponse, NewArrivalsResponse
 from app.constants.enums import PostVisibility, PostType, PlanStatus, PriceType
 from app.crud.post_crud import create_post, get_post_detail_by_id
 from app.crud.plan_crud import create_plan
@@ -11,8 +11,12 @@ from app.crud.post_plans_crud import create_post_plan
 from app.crud.tags_crud import exit_tag, create_tag
 from app.crud.post_tags_crud import create_post_tag
 from app.crud.post_categories_crud import create_post_category
+from app.crud.top_crud import get_recent_posts
 from app.models.tags import Tags
+from typing import List
 import os
+from os import getenv
+from app.api.commons.utils import get_video_duration
 
 router = APIRouter()
 
@@ -22,10 +26,13 @@ POST_TYPE_MAPPING = {
     "image": PostType.IMAGE,
 }
 
+
+BASE_URL = getenv("CDN_BASE_URL")
+
 @router.post("/create", response_model=PostResponse)
 async def create_post_endpoint(
     post_create: PostCreateRequest,
-    user = Depends(get_current_user),
+    user = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     try:
@@ -95,12 +102,13 @@ async def create_post_endpoint(
 @router.get("/detail")
 async def get_post_detail(
     post_id: str = Query(..., description="投稿ID"),
-    user = Depends(get_current_user),
+    user = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     try:
         # CRUD関数を使用して投稿詳細を取得
-        post_data = get_post_detail_by_id(db, post_id, user.id)
+        user_id = user.id if user else None
+        post_data = get_post_detail_by_id(db, post_id, user_id)
         
         if not post_data:
             raise HTTPException(status_code=404, detail="投稿が見つかりません")
@@ -166,7 +174,26 @@ async def get_post_detail(
     except Exception as e:
         print("投稿詳細取得エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@router.get("/new-arrivals" , response_model=List[NewArrivalsResponse])
+async def get_new_arrivals(
+    db: Session = Depends(get_db)
+):
+    try:
+        recent_posts = get_recent_posts(db, limit=50)
+        return [NewArrivalsResponse(
+            id=str(post.Posts.id),
+            description=post.Posts.description,
+            thumbnail_url=f"{BASE_URL}/{post.thumbnail_key}" if post.thumbnail_key else None,
+            creator_name=post.slug,
+            display_name=post.display_name,
+            creator_avatar_url=f"{BASE_URL}/{post.avatar_url}" if post.avatar_url else None,
+            duration=get_video_duration(post.duration_sec) if post.duration_sec else None
+        ) for post in recent_posts]
+    except Exception as e:
+        print("新着投稿取得エラーが発生しました", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 def _determine_visibility(single: bool, plan: bool) -> int:
     """投稿の可視性を判定する"""
     if single and plan:

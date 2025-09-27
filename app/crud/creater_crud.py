@@ -8,6 +8,9 @@ from app.models.user import Users
 from app.models.identity import IdentityVerifications, IdentityDocuments
 from app.schemas.creator import CreatorCreate, CreatorUpdate, IdentityVerificationCreate, IdentityDocumentCreate
 from app.constants.enums import CreatorStatus, VerificationStatus, AccountType
+from app.models.profiles import Profiles
+from sqlalchemy import desc
+from app.models.social import Follows
 
 def create_creator(db: Session, creator_create: CreatorCreate, user_id: UUID) -> Creators:
     db_creator = Creators(
@@ -150,4 +153,26 @@ def get_identity_verification_by_user_id(db: Session, user_id: UUID) -> Identity
     """
     return db.scalar(
         select(IdentityVerifications).where(IdentityVerifications.user_id == user_id)
+    )
+
+def get_creators(db: Session, limit: int = 50):
+    from sqlalchemy import func
+    from app.models.social import Follows
+    
+    return (
+        db.query(
+            Users, 
+            Users.id,
+            Users.slug,
+            Profiles.display_name,
+            Profiles.avatar_url,
+            func.coalesce(func.count(Follows.creator_user_id), 0).label('followers_count')
+        )
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(Follows, Follows.creator_user_id == Users.id)
+        .filter(Users.role == AccountType.CREATOR)
+        .group_by(Users.id, Users.slug, Profiles.display_name, Profiles.avatar_url)
+        .order_by(desc(Users.created_at))
+        .limit(limit)
+        .all()
     )

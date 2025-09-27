@@ -286,7 +286,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         "approved_posts": approved_posts
     }
 
-def get_post_detail_by_id(db: Session, post_id: str, user_id: str) -> dict:
+def get_post_detail_by_id(db: Session, post_id: str, user_id: str | None) -> dict:
     """
     投稿詳細を取得（メディア情報とクリエイター情報、カテゴリ情報、販売情報を含む）
     """
@@ -312,18 +312,20 @@ def get_post_detail_by_id(db: Session, post_id: str, user_id: str) -> dict:
         **media_info
     }
     
-def _is_purchased(db: Session, user_id: UUID, post_id: UUID) -> bool:
+def _is_purchased(db: Session, user_id: UUID | None, post_id: UUID) -> bool:
     """
     ユーザーが投稿を購入しているかどうかを判定
-    
+
     Args:
         db (Session): データベースセッション
-        user_id (UUID): ユーザーID
+        user_id (UUID | None): ユーザーID（Noneの場合は未購入扱い）
         post_id (UUID): 投稿ID
-        
+
     Returns:
         bool: 購入済みの場合True、未購入の場合False
     """
+    if user_id is None:
+        return False
     return db.query(exists().where(
         Purchases.user_id == user_id,
         Purchases.post_id == post_id,
@@ -410,10 +412,10 @@ def _get_sale_info(db: Session, post_id: str) -> dict:
         "subscription": subscription
     }
 
-def _get_media_info(db: Session, post_id: str, user_id: str) -> dict:
+def _get_media_info(db: Session, post_id: str, user_id: str | None) -> dict:
     """メディア情報を取得・処理"""
     media_assets = db.query(MediaAssets).filter(MediaAssets.post_id == post_id).all()
-    purchased = _is_purchased(db, user_id, post_id)
+    purchased = _is_purchased(db, user_id, post_id) if user_id else False
     
     video_rendition = None
     thumbnail_key = None
