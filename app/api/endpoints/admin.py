@@ -380,7 +380,7 @@ def get_post(
     CDN_URL = getenv("CDN_BASE_URL", "")
     for media_asset_id, media_asset_data in post_data['media_assets'].items():
         if media_asset_data['kind'] in [MediaAssetKind.IMAGES, MediaAssetKind.MAIN_VIDEO, MediaAssetKind.SAMPLE_VIDEO]:
-            presign_url = presign_get("examination", media_asset_data['storage_key'])
+            presign_url = presign_get("ingest", media_asset_data['storage_key'])
             post_data['media_assets'][media_asset_id]['storage_key'] = presign_url['download_url']
         elif media_asset_data['kind'] in [MediaAssetKind.OGP, MediaAssetKind.THUMBNAIL]:
             post_data['media_assets'][media_asset_id]['storage_key'] = CDN_URL + "/" + media_asset_data['storage_key']

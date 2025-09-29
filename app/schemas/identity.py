@@ -16,6 +16,7 @@ class CompleteRequest(BaseModel):
 class VerifyFileSpec(BaseModel):
     kind: Kind
     ext: Literal["jpg","jpeg","png","webp"]
+    content_type: str
 
 
 class VerifyRequest(BaseModel):
@@ -24,4 +25,3 @@ class VerifyRequest(BaseModel):
 
 class VerifyPresignRequest(BaseModel):
     files: List[VerifyFileSpec] = Field(..., description='例: [{"kind":"front","content_type":"image/jpeg","ext":"jpg"}, ...]')
-    content_type: str = Field("image/jpeg")

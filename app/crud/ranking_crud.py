@@ -9,7 +9,7 @@ from app.models.media_assets import MediaAssets
 from app.models.social import Likes
 from app.constants.enums import MediaAssetKind, PostStatus
 
-def get_ranking_posts_all_time(db: Session, limit: int = 5):
+def get_ranking_posts_all_time(db: Session, limit: int = 500):
     """
     全期間でいいね数が多い投稿を取得
     """
@@ -36,7 +36,7 @@ def get_ranking_posts_all_time(db: Session, limit: int = 5):
     )
 
 
-def get_ranking_posts_monthly(db: Session, limit: int = 5):
+def get_ranking_posts_monthly(db: Session, limit: int = 50):
     """
     月間でいいね数が多い投稿を取得
     """
@@ -65,7 +65,7 @@ def get_ranking_posts_monthly(db: Session, limit: int = 5):
     )
 
 
-def get_ranking_posts_weekly(db: Session, limit: int = 5):
+def get_ranking_posts_weekly(db: Session, limit: int = 50):
     """
     週間でいいね数が多い投稿を取得
     """
@@ -94,7 +94,7 @@ def get_ranking_posts_weekly(db: Session, limit: int = 5):
     )
 
 
-def get_ranking_posts_daily(db: Session, limit: int = 5):
+def get_ranking_posts_daily(db: Session, limit: int = 50):
     """
     日間でいいね数が多い投稿を取得
     """

@@ -68,7 +68,8 @@ def get_top_page_data(db: Session = Depends(get_db)):
                 creator_name=p.slug,
                 display_name=p.display_name,
                 creator_avatar_url=f"{BASE_URL}/{p.avatar_url}" if p.avatar_url else None,
-                duration=get_video_duration(p.duration_sec) if p.duration_sec else None
+                duration=get_video_duration(p.duration_sec) if p.duration_sec else None,
+                likes_count=p.likes_count or 0
             ) for p in recent_posts]
         )
     except Exception as e:

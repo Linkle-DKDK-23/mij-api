@@ -92,7 +92,7 @@ def me(user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
         user.last_login_at = datetime.utcnow()
         db.commit()
         
-        return {"id": str(user.id), "email": user.email}
+        return {"id": str(user.id), "email": user.email, "role": user.role}
     except HTTPException:
         raise
     except Exception as e:

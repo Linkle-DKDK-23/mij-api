@@ -23,17 +23,12 @@ def s3_client_for_mc():
 # 環境セット
 ENV = os.environ.get("ENV")
 
-# ビデオ
-VIDEO_BUCKET = os.environ.get("S3_BUCKET_NAME") 
-IDENTITY_BUCKET   = os.environ.get("KYC_BUCKET_NAME") 
-
-# 認証
-KMS_ALIAS_VIDEO = os.environ.get("KMS_ALIAS_VIDEO") 
-KMS_ALIAS_IDENTITY   = os.environ.get("KMS_ALIAS_KYC") 
+# 身分証明バケット
+KYC_BUCKET_NAME = os.environ.get("KYC_BUCKET_NAME")
+KMS_ALIAS_KYC   = os.environ.get("KMS_ALIAS_KYC") 
 
 # アカウント
 ASSETS_BUCKET_NAME = os.environ.get("ASSETS_BUCKET_NAME")
-KMS_ALIAS_ACCOUNT = os.environ.get("KMS_ALIAS_ASSET")
 
 # ビデオバケット
 INGEST_BUCKET = os.environ.get("INGEST_BUCKET_NAME") 
@@ -44,4 +39,4 @@ MEDIA_BUCKET_NAME = os.environ.get("MEDIA_BUCKET_NAME")
 KMS_ALIAS_MEDIA = os.environ.get("KMS_ALIAS_MEDIA")
 
 MEDIACONVERT_ROLE_ARN = os.environ.get("MEDIACONVERT_ROLE_ARN")
-OUTPUT_KMS_ARN = os.environ.get("OUTPUT_KMS_ARN")
+OUTPUT_COVERT_KMS_ARN = os.environ.get("OUTPUT_KMS_ARN")

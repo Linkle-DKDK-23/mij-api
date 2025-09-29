@@ -2,11 +2,9 @@
 from app.services.s3.client import s3_client_for_mc
 from app.services.s3.client import (
     MEDIA_BUCKET_NAME, 
-    KMS_ALIAS_MEDIA, 
     INGEST_BUCKET, 
-    KMS_ALIAS_INGEST, 
     MEDIACONVERT_ROLE_ARN,
-    OUTPUT_KMS_ARN
+    OUTPUT_COVERT_KMS_ARN
 )
 
 
@@ -47,7 +45,7 @@ def build_media_rendition_job_settings(input_key: str, output_prefix: str, userm
                             "S3Settings": {
                                 "Encryption": {
                                     "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
-                                    "KmsKeyArn": OUTPUT_KMS_ARN  # ← 環境から渡す or settingsで解決
+                                    "KmsKeyArn": OUTPUT_COVERT_KMS_ARN  # ← 環境から渡す or settingsで解決
                                 }
                             }
                         }
@@ -112,7 +110,7 @@ def build_preview_mp4_settings(input_key: str, output_key: str, usermeta: dict):
                             "S3Settings": {
                                 "Encryption": {
                                     "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
-                                    "KmsKeyArn": OUTPUT_KMS_ARN
+                                    "KmsKeyArn": OUTPUT_COVERT_KMS_ARN
                                 }
                             }
                         }
@@ -224,7 +222,7 @@ def build_hls_abr4_settings(input_key: str, output_prefix: str, usermeta: dict):
                             "S3Settings": {
                                 "Encryption": {
                                     "EncryptionType": "SERVER_SIDE_ENCRYPTION_KMS",
-                                    "KmsKeyArn": OUTPUT_KMS_ARN
+                                    "KmsKeyArn": OUTPUT_COVERT_KMS_ARN
                                 }
                             }
                         }

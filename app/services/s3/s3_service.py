@@ -1,9 +1,9 @@
 import boto3
 from typing import Literal
-from .client import s3_client, VIDEO_BUCKET, IDENTITY_BUCKET, KMS_ALIAS_VIDEO, KMS_ALIAS_IDENTITY
+from .client import s3_client, KYC_BUCKET_NAME, KMS_ALIAS_KYC
 
 
-Resource = Literal["video", "identity"]
+Resource = Literal["identity"]
 
 def _bucket_and_kms(resource: Resource):
     """
@@ -12,10 +12,8 @@ def _bucket_and_kms(resource: Resource):
     Args:
         resource (Resource): リソース
     """
-    if resource == "video":
-        return VIDEO_BUCKET, KMS_ALIAS_VIDEO
-    elif resource == "identity":
-        return IDENTITY_BUCKET, KMS_ALIAS_IDENTITY
+    if resource == "identity":
+        return KYC_BUCKET_NAME, KMS_ALIAS_KYC
     raise ValueError("unknown resource")
 
 def bucket_exit_check(resource: Resource, key: str):

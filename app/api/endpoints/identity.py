@@ -24,7 +24,7 @@ from app.crud.creater_crud import update_creator_status
 from app.constants.enums import CreatorStatus
 router = APIRouter()
 
-from app.services.s3.client import s3_client, IDENTITY_BUCKET
+from app.services.s3.client import s3_client
 s3 = s3_client()
 
 @router.post("/presign-upload")

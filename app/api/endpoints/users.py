@@ -13,7 +13,10 @@ from app.deps.auth import get_current_user
 from app.crud.profile_crud import create_profile
 from app.schemas.user import ProfilePostResponse, ProfilePlanResponse, ProfilePurchaseResponse, ProfileGachaResponse
 from app.models.posts import Posts
+import os
 router = APIRouter()
+
+BASE_URL = os.getenv("CDN_BASE_URL")
 
 @router.post("/register", response_model=UserOut)
 def register_user(
@@ -98,7 +101,7 @@ def get_user_profile_by_slug_endpoint(
                 likes_count=likes_count,
                 created_at=post.created_at,
                 description=post.description,
-                thumbnail_url=f"https://cdn-dev.mijfans.jp/{thumbnail_key}" if thumbnail_key else None
+                thumbnail_url=f"{BASE_URL}/{thumbnail_key}" if thumbnail_key else None
             ))
         
         profile_plans = []
@@ -125,7 +128,7 @@ def get_user_profile_by_slug_endpoint(
                 likes_count=likes_count,
                 created_at=post.created_at,
                 description=post.description,
-                thumbnail_url=f"https://cdn-dev.mijfans.jp/{thumbnail_key}" if thumbnail_key else None
+                thumbnail_url=f"{BASE_URL}/{thumbnail_key}" if thumbnail_key else None
             ))
         
         profile_gacha_items = [] 
@@ -140,8 +143,8 @@ def get_user_profile_by_slug_endpoint(
             id=user.id,
             slug=user.slug,
             display_name=profile.display_name if profile else None,
-            avatar_url=profile.avatar_url if profile else None,
-            cover_url=profile.cover_url if profile else None,
+            avatar_url=f"{BASE_URL}/{profile.avatar_url}" if profile and profile.avatar_url else None,
+            cover_url=f"{BASE_URL}/{profile.cover_url}" if profile and profile.cover_url else None,
             bio=profile.bio if profile else None,
             website_url=website_url,
             post_count=len(profile_data["posts"]),

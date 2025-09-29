@@ -29,3 +29,13 @@ class PostCategoryResponse(BaseModel):
 	creator_name: str
 	display_name: str
 	creator_avatar_url: Optional[str] = None
+
+class NewArrivalsResponse(BaseModel):
+    id: str
+    description: str
+    thumbnail_url: Optional[str] = None
+    creator_name: str
+    display_name: str
+    creator_avatar_url: Optional[str] = None
+    duration: Optional[str] = None
+    likes_count: int = 0
