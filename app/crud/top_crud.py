@@ -114,7 +114,7 @@ def get_new_creators(db: Session, limit: int = 5):
 
 def get_recent_posts(db: Session, limit: int = 50):
     """
-    最新の投稿を取得
+    最新の投稿を取得（いいね数も含む）
     """
     return (
         db.query(
@@ -123,7 +123,8 @@ def get_recent_posts(db: Session, limit: int = 50):
             Profiles.display_name,
             Profiles.avatar_url,
             ThumbnailAssets.storage_key.label('thumbnail_key'),
-            MediaRenditions.duration_sec.label('duration_sec')
+            MediaRenditions.duration_sec.label('duration_sec'),
+            func.count(Likes.post_id).label('likes_count')
         )
         .join(Users, Posts.creator_user_id == Users.id)
         .join(Profiles, Users.id == Profiles.user_id)
@@ -133,7 +134,17 @@ def get_recent_posts(db: Session, limit: int = 50):
         .outerjoin(VideoAssets, (Posts.id == VideoAssets.post_id) & (VideoAssets.kind == MediaAssetKind.MAIN_VIDEO))
         # メインビデオのMediaRenditions
         .outerjoin(MediaRenditions, VideoAssets.id == MediaRenditions.asset_id)
+        # いいね数を取得するためのLikesテーブル
+        .outerjoin(Likes, Posts.id == Likes.post_id)
         .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(
+            Posts.id,
+            Users.slug,
+            Profiles.display_name,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key,
+            MediaRenditions.duration_sec
+        )
         .order_by(desc(Posts.created_at))
         .limit(limit)
         .all()

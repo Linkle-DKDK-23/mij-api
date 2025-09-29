@@ -188,7 +188,8 @@ async def get_new_arrivals(
             creator_name=post.slug,
             display_name=post.display_name,
             creator_avatar_url=f"{BASE_URL}/{post.avatar_url}" if post.avatar_url else None,
-            duration=get_video_duration(post.duration_sec) if post.duration_sec else None
+            duration=get_video_duration(post.duration_sec) if post.duration_sec else None,
+            likes_count=post.likes_count or 0
         ) for post in recent_posts]
     except Exception as e:
         print("新着投稿取得エラーが発生しました", e)

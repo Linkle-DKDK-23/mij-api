@@ -38,3 +38,4 @@ class NewArrivalsResponse(BaseModel):
     display_name: str
     creator_avatar_url: Optional[str] = None
     duration: Optional[str] = None
+    likes_count: int = 0

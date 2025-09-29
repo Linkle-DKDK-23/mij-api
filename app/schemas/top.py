@@ -34,6 +34,7 @@ class RecentPostResponse(BaseModel):
     display_name: str
     creator_avatar_url: Optional[str] = None
     duration: Optional[str] = None
+    likes_count: int = 0
 
 class TopPageResponse(BaseModel):
     genres: List[GenreResponse]
