@@ -13,7 +13,7 @@ class RankingPostResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     rank: int
     duration: Optional[str] = None
@@ -21,7 +21,7 @@ class RankingPostResponse(BaseModel):
 class CreatorResponse(BaseModel):
     id: str
     name: str
-    display_name: str
+    username: str
     avatar_url: Optional[str] = None
     followers_count: int
     rank: Optional[int] = None
@@ -31,7 +31,7 @@ class RecentPostResponse(BaseModel):
     description: str
     thumbnail_url: Optional[str] = None
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     duration: Optional[str] = None
     likes_count: int = 0

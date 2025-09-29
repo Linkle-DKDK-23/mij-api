@@ -17,8 +17,8 @@ def get_ranking_posts_all_time(db: Session, limit: int = 500):
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -29,7 +29,7 @@ def get_ranking_posts_all_time(db: Session, limit: int = 500):
         # TODO: 公開済みの投稿のみにする
         # .filter(Posts.status == PostStatus.APPROVED)  # 公開済みの投稿のみ
         .filter(Posts.deleted_at.is_(None))  # 削除されていない投稿のみ
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc('likes_count'))
         .limit(limit)
         .all()
@@ -46,8 +46,8 @@ def get_ranking_posts_monthly(db: Session, limit: int = 50):
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -58,7 +58,7 @@ def get_ranking_posts_monthly(db: Session, limit: int = 50):
         # .filter(Posts.status == PostStatus.APPROVED)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.created_at >= one_month_ago)  # 過去30日以内のいいね
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc('likes_count'))
         .limit(limit)
         .all()
@@ -75,8 +75,8 @@ def get_ranking_posts_weekly(db: Session, limit: int = 50):
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -87,7 +87,7 @@ def get_ranking_posts_weekly(db: Session, limit: int = 50):
         # .filter(Posts.status == PostStatus.APPROVED)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.created_at >= one_week_ago)  # 過去7日以内のいいね
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc('likes_count'))
         .limit(limit)
         .all()
@@ -104,8 +104,8 @@ def get_ranking_posts_daily(db: Session, limit: int = 50):
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -116,7 +116,7 @@ def get_ranking_posts_daily(db: Session, limit: int = 50):
         # .filter(Posts.status == PostStatus.APPROVED)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.created_at >= one_day_ago)  # 過去1日以内のいいね
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc('likes_count'))
         .limit(limit)
         .all()

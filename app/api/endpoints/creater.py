@@ -173,8 +173,8 @@ def get_creator_list(
         creators = get_creators(db, limit=50)
         return [{
             "id": str(creator.id),
-            "name": creator.slug,
-            "display_name": creator.display_name,
+            "name": creator.profile_name,
+            "username": creator.username,
             "followers_count": creator.followers_count,
             "avatar_url": f"{BASE_URL}/{creator.avatar_url}" if creator.avatar_url else None
         } for creator in creators]

@@ -163,15 +163,15 @@ def get_creators(db: Session, limit: int = 50):
         db.query(
             Users, 
             Users.id,
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.coalesce(func.count(Follows.creator_user_id), 0).label('followers_count')
         )
         .join(Profiles, Users.id == Profiles.user_id)
         .outerjoin(Follows, Follows.creator_user_id == Users.id)
         .filter(Users.role == AccountType.CREATOR)
-        .group_by(Users.id, Users.slug, Profiles.display_name, Profiles.avatar_url)
+        .group_by(Users.id, Users.profile_name, Profiles.username, Profiles.avatar_url)
         .order_by(desc(Users.created_at))
         .limit(limit)
         .all()

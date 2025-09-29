@@ -155,8 +155,8 @@ async def get_post_detail(
             "views": 0,
             "likes": post_data["likes_count"],
             "creator": {
-                "name": post_data["creator_profile"].display_name if post_data["creator_profile"] else post_data["creator"].email,
-                "slug": post_data["creator"].slug if post_data["creator_profile"] else post_data["creator"].email,
+                "name": post_data["creator_profile"].username if post_data["creator_profile"] else post_data["creator"].email,
+                "profile_name": post_data["creator"].profile_name if post_data["creator_profile"] else post_data["creator"].email,
                 "avatar": creator_avatar,
                 "verified": True
             },
@@ -185,8 +185,8 @@ async def get_new_arrivals(
             id=str(post.Posts.id),
             description=post.Posts.description,
             thumbnail_url=f"{BASE_URL}/{post.thumbnail_key}" if post.thumbnail_key else None,
-            creator_name=post.slug,
-            display_name=post.display_name,
+            creator_name=post.profile_name,
+            username=post.username,
             creator_avatar_url=f"{BASE_URL}/{post.avatar_url}" if post.avatar_url else None,
             duration=get_video_duration(post.duration_sec) if post.duration_sec else None,
             likes_count=post.likes_count or 0

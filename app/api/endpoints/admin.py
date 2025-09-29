@@ -129,7 +129,7 @@ def create_user(
         
         new_user = Users(
             email=user_data.email,
-            slug=user_data.display_name,
+            profile_name=user_data.username,
             password_hash=hashed_password,
             role=role_value,
             status=1,  # active
@@ -142,7 +142,7 @@ def create_user(
         # プロフィール作成
         new_profile = Profiles(
             user_id=new_user.id,
-            display_name=user_data.display_name,
+            username=user_data.username,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
@@ -173,7 +173,7 @@ def create_test_admin(
         
         test_admin = Users(
             email="admin@test.com",
-            slug="test_admin",
+            profile_name="test_admin",
             password_hash=hashed_password,
             role=3,  # admin
             status=1,  # active
@@ -186,7 +186,7 @@ def create_test_admin(
         # プロフィール作成
         admin_profile = Profiles(
             user_id=test_admin.id,
-            display_name="Test Admin",
+            username="Test Admin",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )

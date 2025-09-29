@@ -42,8 +42,8 @@ class ProfileGachaResponse(BaseModel):
 
 class UserProfileResponse(BaseModel):
     id: UUID
-    slug: str
-    display_name: Optional[str] = None
+    profile_name: str
+    username: Optional[str] = None
     avatar_url: Optional[str] = None
     cover_url: Optional[str] = None
     bio: Optional[str] = None

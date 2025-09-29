@@ -7,7 +7,7 @@ class RankingPostsAllTimeResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     rank: int
 
@@ -17,7 +17,7 @@ class RankingPostsMonthlyResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     rank: int
 
@@ -27,7 +27,7 @@ class RankingPostsWeeklyResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     rank: int
 
@@ -37,7 +37,7 @@ class RankingPostsDailyResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     rank: int
 

@@ -27,7 +27,7 @@ class PostCategoryResponse(BaseModel):
 	thumbnail_url: Optional[str] = None
 	likes_count: int
 	creator_name: str
-	display_name: str
+	username: str
 	creator_avatar_url: Optional[str] = None
 
 class NewArrivalsResponse(BaseModel):
@@ -35,7 +35,7 @@ class NewArrivalsResponse(BaseModel):
     description: str
     thumbnail_url: Optional[str] = None
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     duration: Optional[str] = None
     likes_count: int = 0

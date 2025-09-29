@@ -25,7 +25,7 @@ class Users(Base):
     __tablename__ = "users"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
-    slug: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
+    profile_name: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
     email: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     password_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -4,13 +4,13 @@ from uuid import UUID
 from app.schemas.account import AccountUpdateRequest
 from datetime import datetime
 
-def create_profile(db: Session, user_id: UUID, display_name: str) -> Profiles:
+def create_profile(db: Session, user_id: UUID, username: str) -> Profiles:
     """
     プロフィールを作成
     """
     db_profile = Profiles(
         user_id=user_id,
-        display_name=display_name,
+        username=username,
     )
     db.add(db_profile)
     db.flush()
@@ -23,18 +23,18 @@ def get_profile_by_user_id(db: Session, user_id: UUID) -> Profiles:
     """
     return db.query(Profiles).filter(Profiles.user_id == user_id).first()
 
-def get_profile_by_display_name(db: Session, display_name: str) -> Profiles:
+def get_profile_by_username(db: Session, username: str) -> Profiles:
     """
-    ディスプレイネームに紐づくプロフィールを取得
+    ユーザー名に紐づくプロフィールを取得
     """
-    return db.query(Profiles).filter(Profiles.display_name == display_name).first()
+    return db.query(Profiles).filter(Profiles.username == username).first()
 
 def update_profile(db: Session, user_id: UUID, update_data: AccountUpdateRequest) -> Profiles:
     """
     プロフィールを更新
     """
     profile = get_profile_by_user_id(db, user_id)
-    profile.display_name = update_data.display_name
+    profile.username = update_data.username
     profile.bio = update_data.description
     profile.links = update_data.links
     profile.avatar_url = update_data.avatar_url

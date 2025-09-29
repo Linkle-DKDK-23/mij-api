@@ -111,7 +111,7 @@ def get_users_paginated(
     
     if search:
         query = query.join(Profiles).filter(
-            (Profiles.display_name.ilike(f"%{search}%")) |
+            (Profiles.username.ilike(f"%{search}%")) |
             (Users.email.ilike(f"%{search}%"))
         )
     
@@ -124,10 +124,10 @@ def get_users_paginated(
         query = query.order_by(desc(Users.created_at))
     elif sort == "created_at_asc":
         query = query.order_by(asc(Users.created_at))
-    elif sort == "display_name_asc":
-        query = query.join(Profiles).order_by(asc(Profiles.display_name))
-    elif sort == "display_name_desc":
-        query = query.join(Profiles).order_by(desc(Profiles.display_name))
+    elif sort == "username_asc":
+        query = query.join(Profiles).order_by(asc(Profiles.username))
+    elif sort == "username_desc":
+        query = query.join(Profiles).order_by(desc(Profiles.username))
     elif sort == "email_asc":
         query = query.order_by(asc(Users.email))
     else:
@@ -167,7 +167,7 @@ def get_creator_applications_paginated(
     
     if search:
         query = query.join(Profiles).filter(
-            (Profiles.display_name.ilike(f"%{search}%")) |
+            (Profiles.username.ilike(f"%{search}%")) |
             (Users.email.ilike(f"%{search}%"))
         )
     
@@ -181,9 +181,9 @@ def get_creator_applications_paginated(
     elif sort == "created_at_asc":
         query = query.order_by(asc(Creators.created_at))
     elif sort == "user_name_asc":
-        query = query.join(Profiles).order_by(asc(Profiles.display_name))
+        query = query.join(Profiles).order_by(asc(Profiles.username))
     elif sort == "user_name_desc":
-        query = query.join(Profiles).order_by(desc(Profiles.display_name))
+        query = query.join(Profiles).order_by(desc(Profiles.username))
     else:
         query = query.order_by(desc(Creators.created_at))
     
@@ -221,7 +221,7 @@ def get_identity_verifications_paginated(
     
     if search:
         query = query.join(Profiles).filter(
-            (Profiles.display_name.ilike(f"%{search}%")) |
+            (Profiles.username.ilike(f"%{search}%")) |
             (Users.email.ilike(f"%{search}%"))
         )
     
@@ -235,9 +235,9 @@ def get_identity_verifications_paginated(
     elif sort == "created_at_asc":
         query = query.order_by(asc(IdentityVerifications.created_at))
     elif sort == "user_name_asc":
-        query = query.join(Profiles).order_by(asc(Profiles.display_name))
+        query = query.join(Profiles).order_by(asc(Profiles.username))
     elif sort == "user_name_desc":
-        query = query.join(Profiles).order_by(desc(Profiles.display_name))
+        query = query.join(Profiles).order_by(desc(Profiles.username))
     else:
         query = query.order_by(desc(IdentityVerifications.created_at))
     
@@ -510,9 +510,9 @@ def get_post_by_id(db: Session, post_id: str) -> Dict[str, Any]:
         'created_at': post.created_at.isoformat() if post.created_at else None,
         # ユーザー情報
         'user_id': str(user.id),
-        'user_slug': user.slug,
+        'user_profile_name': user.profile_name,
         # プロフィール情報
-        'profile_display_name': profile.display_name,
+        'profile_username': profile.username,
         'profile_avatar_url': f"{CDN_URL}/{profile.avatar_url}" if profile.avatar_url else None,
         'post_type': post.post_type,
         # メディアアセット情報

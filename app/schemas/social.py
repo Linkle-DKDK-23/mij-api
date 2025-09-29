@@ -18,7 +18,7 @@ class CommentResponse(BaseModel):
     body: str
     created_at: datetime
     updated_at: datetime
-    user_display_name: str
+    user_username: str
     user_avatar: Optional[str] = None
 
     class Config:
@@ -50,8 +50,8 @@ class BookmarkResponse(BaseModel):
 
 class UserBasicResponse(BaseModel):
     id: UUID
-    display_name: str
-    slug: str
+    username: str
+    profile_name: str
     avatar_storage_key: Optional[str] = None
 
     class Config:

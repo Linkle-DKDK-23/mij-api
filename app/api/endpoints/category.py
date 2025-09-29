@@ -23,8 +23,8 @@ async def get_category_by_slug(
             description=post.Posts.description,
             thumbnail_url=f"{BASE_URL}/{post.thumbnail_key}" if post.thumbnail_key else None,
             likes_count=post.likes_count,
-            creator_name=post.slug,
-            display_name=post.display_name,
+            creator_name=post.profile_name,
+            username=post.username,
             creator_avatar_url=f"{BASE_URL}/{post.avatar_url}" if post.avatar_url else None
         ) for post in posts]
     except Exception as e:
