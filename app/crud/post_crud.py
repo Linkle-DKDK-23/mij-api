@@ -121,8 +121,8 @@ def get_posts_by_category_slug(db: Session, slug: str) -> List[Posts]:
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -133,7 +133,7 @@ def get_posts_by_category_slug(db: Session, slug: str) -> List[Posts]:
         .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
         .outerjoin(Likes, Posts.id == Likes.post_id)
         .filter(Categories.slug == slug)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()
     )
@@ -148,8 +148,8 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.min(Prices.price).label('post_price'),  # 最安値を取得
             func.min(Prices.currency).label('post_currency'),  # 最安値の通貨を取得
@@ -165,7 +165,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         .filter(Posts.creator_user_id == user_id)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.status == PostStatus.PENDING)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()
     )
@@ -175,8 +175,8 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.min(Prices.price).label('post_price'),  # 最安値を取得
             func.min(Prices.currency).label('post_currency'),  # 最安値の通貨を取得
@@ -192,7 +192,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         .filter(Posts.creator_user_id == user_id)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.status == PostStatus.REJECTED)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()
     )
@@ -202,8 +202,8 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.min(Prices.price).label('post_price'),  # 最安値を取得
             func.min(Prices.currency).label('post_currency'),  # 最安値の通貨を取得
@@ -219,7 +219,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         .filter(Posts.creator_user_id == user_id)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.status == PostStatus.UNPUBLISHED)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()
     )
@@ -229,8 +229,8 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.min(Prices.price).label('post_price'),  # 最安値を取得
             func.min(Prices.currency).label('post_currency'),  # 最安値の通貨を取得
@@ -246,7 +246,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         .filter(Posts.creator_user_id == user_id)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.status == PostStatus.DELETED)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()
     )
@@ -256,8 +256,8 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.min(Prices.price).label('post_price'),  # 最安値を取得
             func.min(Prices.currency).label('post_currency'),  # 最安値の通貨を取得
@@ -273,7 +273,7 @@ def get_post_status_by_user_id(db: Session, user_id: UUID) -> dict:
         .filter(Posts.creator_user_id == user_id)
         .filter(Posts.deleted_at.is_(None))
         .filter(Posts.status == PostStatus.APPROVED)
-        .group_by(Posts.id, Users.slug, Profiles.display_name, Profiles.avatar_url, MediaAssets.storage_key)
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
         .order_by(desc(Posts.created_at))
         .all()
     )

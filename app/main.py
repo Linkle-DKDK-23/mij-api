@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 # ========================
 # ✅ .env スイッチング処理
 # ========================
-env = os.getenv("ENV", "staging")
+env = os.getenv("ENV", "development")
 env_file = f".env.{env}"
 load_dotenv(dotenv_path=env_file)
 print(f" Loaded FastAPI ENV: {env_file}")
@@ -23,6 +23,8 @@ origins = [
     "http://localhost:3000",
 
     "http://localhost:3001",
+
+    "http://localhost:3003",
 
     # ステージング環境
     "https://stg.mijfans.jp",

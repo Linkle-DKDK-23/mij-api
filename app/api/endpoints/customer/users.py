@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from app.crud.user_crud import (
     create_user,
     check_email_exists,
-    check_slug_exists,
-    get_user_profile_by_display_name
+    check_profile_name_exists,
+    get_user_profile_by_username
 )
 from app.api.commons.utils import generate_code
 from app.deps.auth import get_current_user
@@ -40,19 +40,19 @@ def register_user(
         is_email_exists = check_email_exists(db, user_create.email)
         if is_email_exists:
             raise HTTPException(status_code=400, detail="存在しているメールアドレスです")
-        is_slug_exists = check_slug_exists(db, user_create.name)
-        if is_slug_exists:
+        is_profile_name_exists = check_profile_name_exists(db, user_create.name)
+        if is_profile_name_exists:
             raise HTTPException(status_code=400, detail="存在しているユーザー名です")
-        
+
         for _ in range(10):  # 最大10回リトライ
-            slug_code = generate_code(5)
-            is_slug_exists = check_slug_exists(db, slug_code)
-            if not is_slug_exists:
+            username_code = generate_code(5)
+            is_profile_name_exists = check_profile_name_exists(db, username_code)
+            if not is_profile_name_exists:
                 break
             raise HTTPException(status_code=500, detail="ユーザー名の生成に失敗しました")
 
         db_user = create_user(db, user_create)
-        db_profile = create_profile(db, db_user.id, slug_code)
+        db_profile = create_profile(db, db_user.id, username_code)
 
         db.commit()
         db.refresh(db_user)
@@ -65,15 +65,15 @@ def register_user(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/profile", response_model=UserProfileResponse)
-def get_user_profile_by_slug_endpoint(
-    display_name: str = Query(..., description="ユーザー名"),
+def get_user_profile_by_username_endpoint(
+    username: str = Query(..., description="ユーザー名"),
     db: Session = Depends(get_db)
 ):
     """
-    ディスプレイネームによるユーザープロフィール取得
+    ユーザー名によるユーザープロフィール取得
     """
     try:
-        profile_data = get_user_profile_by_display_name(db, display_name)
+        profile_data = get_user_profile_by_username(db, username)
         if not profile_data:
             raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
         
@@ -141,8 +141,8 @@ def get_user_profile_by_slug_endpoint(
         
         return UserProfileResponse(
             id=user.id,
-            slug=user.slug,
-            display_name=profile.display_name if profile else None,
+            profile_name=user.profile_name,
+            username=profile.username if profile else None,
             avatar_url=f"{BASE_URL}/{profile.avatar_url}" if profile and profile.avatar_url else None,
             cover_url=f"{BASE_URL}/{profile.cover_url}" if profile and profile.cover_url else None,
             bio=profile.bio if profile else None,

@@ -11,8 +11,8 @@ class AccountFileSpec(BaseModel):
     ext: Literal["jpg","jpeg","png","webp"]
 
 class AccountInfoResponse(BaseModel):
-    slug: str
-    display_name: str
+    profile_name: str
+    username: str
     avatar_url: Optional[str] = None
     cover_url: Optional[str] = None
     followers_count: int
@@ -35,7 +35,7 @@ class AccountPresignResponse(BaseModel):
 
 class AccountUpdateRequest(BaseModel):
     name: Optional[str] = None
-    display_name: Optional[str] = None
+    username: Optional[str] = None
     description: Optional[str] = None
     links: Optional[dict] = None
     avatar_url: Optional[str] = None
@@ -51,7 +51,7 @@ class AccountPostResponse(BaseModel):
     thumbnail_url: Optional[str] = None
     likes_count: int
     creator_name: str
-    display_name: str
+    username: str
     creator_avatar_url: Optional[str] = None
     price: int
     currency: str

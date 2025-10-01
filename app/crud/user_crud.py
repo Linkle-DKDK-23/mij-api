@@ -8,7 +8,7 @@ from app.constants.enums import (
     AccountType, 
     AccountStatus
 )
-from app.crud.profile_crud import get_profile_by_display_name
+from app.crud.profile_crud import get_profile_by_username
 from app.models.posts import Posts
 from app.models.plans import Plans, PostPlans
 from app.models.orders import Orders, OrderItems
@@ -28,7 +28,7 @@ def create_user(db: Session, user_create: UserCreate) -> Users:
     """
     # ランダム文字列5文字作成
     db_user = Users(
-        slug=user_create.name,
+        profile_name=user_create.name,
         email=user_create.email,
         password_hash=hash_password(user_create.password),
         role=AccountType.GENERAL_USER,
@@ -52,18 +52,18 @@ def check_email_exists(db: Session, email: str) -> bool:
     result = db.query(Users).filter(Users.email == email).first()
     return result is not None
 
-def check_slug_exists(db: Session, slug: str) -> bool:
+def check_profile_name_exists(db: Session, profile_name: str) -> bool:
     """
-    スラッグの重複チェック
+    プロファイル名の重複チェック
 
     Args:
         db (Session): データベースセッション
-        slug (str): スラッグ
+        profile_name (str): プロファイル名
 
     Returns:
         bool: 重複している場合はTrue、重複していない場合はFalse
     """
-    result = db.query(Users).filter(Users.slug == slug).first()
+    result = db.query(Users).filter(Users.profile_name == profile_name).first()
     return result is not None
 
 def get_user_by_email(db: Session, email: str) -> Users:
@@ -92,23 +92,23 @@ def get_user_by_id(db: Session, user_id: str) -> Users:
     """
     return db.get(Users, user_id)
 
-def update_user(db: Session, user_id: str, slug: str) -> Users:
+def update_user(db: Session, user_id: str, profile_name: str) -> Users:
     """
     ユーザーを更新
     """
     user = get_user_by_id(db, user_id)
-    user.slug = slug
+    user.profile_name = profile_name
     db.add(user)
     db.flush()
     return user
 
-def get_user_profile_by_display_name(db: Session, display_name: str) -> dict:
+def get_user_profile_by_username(db: Session, username: str) -> dict:
     """
-    ディスプレイネームによるユーザープロフィール取得（関連データ含む）
+    ユーザー名によるユーザープロフィール取得（関連データ含む）
     """
-    
-    
-    profile = get_profile_by_display_name(db, display_name)
+
+
+    profile = get_profile_by_username(db, username)
 
     if not profile:
         return None

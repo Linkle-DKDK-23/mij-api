@@ -41,8 +41,8 @@ def get_ranking_posts(db: Session, limit: int = 5):
         db.query(
             Posts,
             func.count(Likes.post_id).label('likes_count'),
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             ThumbnailAssets.storage_key.label('thumbnail_key'),
             MediaRenditions.duration_sec.label('duration_sec')
@@ -59,8 +59,8 @@ def get_ranking_posts(db: Session, limit: int = 5):
         .filter(Posts.status == PostStatus.APPROVED)
         .group_by(
             Posts.id, 
-            Users.slug, 
-            Profiles.display_name, 
+            Users.profile_name,
+            Profiles.username, 
             Profiles.avatar_url, 
             ThumbnailAssets.storage_key, 
             MediaRenditions.duration_sec
@@ -78,15 +78,15 @@ def get_top_creators(db: Session, limit: int = 5):
     return (
         db.query(
             Users,
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             func.count(Follows.creator_user_id).label('followers_count')
         )
         .join(Profiles, Users.id == Profiles.user_id)
         .outerjoin(Follows, Users.id == Follows.creator_user_id)
         .filter(Users.role == AccountType.CREATOR)
-        .group_by(Users.id, Users.slug, Profiles.display_name, Profiles.avatar_url)
+        .group_by(Users.id, Users.profile_name, Profiles.username, Profiles.avatar_url)
         .order_by(desc('followers_count'))
         .limit(limit)
         .all()
@@ -100,8 +100,8 @@ def get_new_creators(db: Session, limit: int = 5):
     return (
         db.query(
             Users, 
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url
         )
         .join(Profiles, Users.id == Profiles.user_id)
@@ -119,8 +119,8 @@ def get_recent_posts(db: Session, limit: int = 50):
     return (
         db.query(
             Posts,
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             ThumbnailAssets.storage_key.label('thumbnail_key'),
             MediaRenditions.duration_sec.label('duration_sec'),
@@ -139,8 +139,8 @@ def get_recent_posts(db: Session, limit: int = 50):
         .filter(Posts.status == PostStatus.APPROVED)
         .group_by(
             Posts.id,
-            Users.slug,
-            Profiles.display_name,
+            Users.profile_name,
+            Profiles.username,
             Profiles.avatar_url,
             ThumbnailAssets.storage_key,
             MediaRenditions.duration_sec

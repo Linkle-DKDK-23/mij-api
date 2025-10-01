@@ -8,7 +8,7 @@ EXCLUDE_PATHS = {
     "/auth/login", "/auth/refresh", "/auth/logout", 
     "/users/register", "/webhooks/mediaconvert", "/admin/users",
     "/admin/auth/login", "/admin/auth/logout", "/admin/auth/me",
-    "/transcodes/transcode_mc"
+    "/transcodes/transcode_mc", "/preregistrations"
 }
 
 class CSRFMiddleware(BaseHTTPMiddleware):

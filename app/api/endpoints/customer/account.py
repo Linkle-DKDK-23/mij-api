@@ -19,7 +19,7 @@ from app.crud.followes_crud import get_follower_count
 from app.crud.post_crud import get_total_likes_by_user_id, get_posts_count_by_user_id,get_post_status_by_user_id
 from app.crud.sales_crud import get_total_sales
 from app.crud.plan_crud import get_plan_counts
-from app.crud.user_crud import check_slug_exists, update_user
+from app.crud.user_crud import check_profile_name_exists, update_user
 from app.crud.profile_crud import get_profile_by_user_id
 from app.services.s3.keygen import account_asset_key
 from app.services.s3.presign import presign_put_public
@@ -51,8 +51,8 @@ def get_account_info(
         plan_data = get_plan_counts(db, current_user.id)
         
         return AccountInfoResponse(
-            slug=current_user.slug or "",
-            display_name=profile.display_name if profile else "",
+            profile_name=current_user.profile_name or "",
+            username=profile.username if profile else "",
             avatar_url=f"{BASE_URL}/{profile.avatar_url}" if profile and profile.avatar_url else None,
             cover_url=f"{BASE_URL}/{profile.cover_url}" if profile and profile.cover_url else None,
             followers_count=follower_data["followers_count"] if follower_data else 0,
@@ -71,8 +71,8 @@ def get_account_info(
         print("アカウント情報取得エラーが発生しました", e)
         # エラー時はデフォルト値で返す
         return AccountInfoResponse(
-            slug=current_user.slug or "",
-            display_name="",
+            profile_name=current_user.profile_name or "",
+            username="",
             avatar_url=None,
             cover_url=None,
             followers_count=0,
@@ -110,12 +110,12 @@ def update_account_info(
     """
     try:
         if update_data.name:
-            if check_slug_exists(db, update_data.name) and update_data.name != current_user.slug:
+            if check_profile_name_exists(db, update_data.name) and update_data.name != current_user.profile_name:
                 raise HTTPException(status_code=400, detail="このユーザー名は既に使用されています")
-            
+
             user = update_user(db, current_user.id, update_data.name)
-        
-        if update_data.display_name:
+
+        if update_data.username:
             profile = update_profile(db, current_user.id, update_data)
 
         db.commit()
@@ -190,8 +190,8 @@ def get_post_status(
                     description=post.Posts.description,
                     thumbnail_url=f"{BASE_URL}/{post.thumbnail_key}" if post.thumbnail_key else None,
                     likes_count=post.likes_count,
-                    creator_name=post.slug,
-                    display_name=post.display_name,
+                    creator_name=post.profile_name,
+                    username=post.username,
                     creator_avatar_url=f"{BASE_URL}/{post.avatar_url}" if post.avatar_url else None,
                     price=post.post_price,
                     currency=post.post_currency

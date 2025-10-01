@@ -1,4 +1,5 @@
 # app/core/config.py
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -18,7 +19,7 @@ class Settings(BaseSettings):
     COOKIE_PATH: str = "/"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env.development", ".env", ".env.local"],
         case_sensitive=False,
         extra="ignore",
     )

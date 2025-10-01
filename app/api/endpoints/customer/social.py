@@ -48,8 +48,8 @@ def get_followers(
     return [
         UserBasicResponse(
             id=user.id,
-            display_name=user.display_name,
-            slug=user.slug,
+            username=user.username,
+            profile_name=user.profile_name,
             avatar_storage_key=user.avatar_storage_key
         ) for user in followers
     ]
@@ -66,8 +66,8 @@ def get_following(
     return [
         UserBasicResponse(
             id=user.id,
-            display_name=user.display_name,
-            slug=user.slug,
+            username=user.username,
+            profile_name=user.profile_name,
             avatar_storage_key=user.avatar_storage_key
         ) for user in following
     ]
@@ -132,7 +132,7 @@ def create_comment(
         body=new_comment.body,
         created_at=new_comment.created_at,
         updated_at=new_comment.updated_at,
-        user_display_name=current_user.display_name,
+        user_username=current_user.username,
         user_avatar=current_user.avatar_storage_key
     )
 
@@ -155,7 +155,7 @@ def get_comments(
             body=comment.body,
             created_at=comment.created_at,
             updated_at=comment.updated_at,
-            user_display_name=comment.user.display_name,
+            user_username=comment.user.username,
             user_avatar=comment.user.avatar_storage_key
         ))
     return result
@@ -179,7 +179,7 @@ def get_comment_replies(
             body=reply.body,
             created_at=reply.created_at,
             updated_at=reply.updated_at,
-            user_display_name=reply.user.display_name,
+            user_username=reply.user.username,
             user_avatar=reply.user.avatar_storage_key
         ))
     return result
@@ -206,7 +206,7 @@ def update_comment(
         body=updated_comment.body,
         created_at=updated_comment.created_at,
         updated_at=updated_comment.updated_at,
-        user_display_name=current_user.display_name,
+        user_username=current_user.username,
         user_avatar=current_user.avatar_storage_key
     )
 

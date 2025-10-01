@@ -17,7 +17,7 @@ router = APIRouter()
 BASE_URL = getenv("CDN_BASE_URL")
 
 @router.get("/", response_model=TopPageResponse)
-def get_top_page_data(db: Session = Depends(get_db)):
+def get_top_page_data(db: Session = Depends(get_db)) -> TopPageResponse:
     """
     トップページ用データを取得
     """
@@ -40,24 +40,24 @@ def get_top_page_data(db: Session = Depends(get_db)):
                 description=p.Posts.description,
                 thumbnail_url=f"{BASE_URL}/{p.thumbnail_key}" if p.thumbnail_key else None,
                 likes_count=p.likes_count,
-                creator_name=p.slug,
-                display_name=p.display_name,
+                creator_name=p.profile_name,
+                username=p.username,
                 creator_avatar_url=f"{BASE_URL}/{p.avatar_url}" if p.avatar_url else None,
                 rank=idx + 1,
                 duration=get_video_duration(p.duration_sec) if p.duration_sec else None
             ) for idx, p in enumerate(ranking_posts)],
             top_creators=[CreatorResponse(
                 id=str(c.Users.id),
-                name=c.slug,
-                display_name=c.display_name,
+                name=c.profile_name,
+                username=c.username,
                 avatar_url=f"{BASE_URL}/{c.avatar_url}" if c.avatar_url else None,
                 followers_count=c.followers_count,
                 rank=idx + 1
             ) for idx, c in enumerate(top_creators)],
             new_creators=[CreatorResponse(
                 id=str(c.Users.id),
-                name=c.slug,
-                display_name=c.display_name,
+                name=c.profile_name,
+                username=c.username,
                 avatar_url=f"{BASE_URL}/{c.avatar_url}" if c.avatar_url else None,
                 followers_count=0
             ) for c in new_creators],
@@ -65,8 +65,8 @@ def get_top_page_data(db: Session = Depends(get_db)):
                 id=str(p.Posts.id),
                 description=p.Posts.description,
                 thumbnail_url=f"{BASE_URL}/{p.thumbnail_key}" if p.thumbnail_key else None,
-                creator_name=p.slug,
-                display_name=p.display_name,
+                creator_name=p.profile_name,
+                username=p.username,
                 creator_avatar_url=f"{BASE_URL}/{p.avatar_url}" if p.avatar_url else None,
                 duration=get_video_duration(p.duration_sec) if p.duration_sec else None,
                 likes_count=p.likes_count or 0

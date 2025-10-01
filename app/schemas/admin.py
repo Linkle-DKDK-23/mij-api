@@ -35,7 +35,7 @@ class AdminUserResponse(BaseModel):
     updated_at: datetime
     
     # Profileから取得するフィールド
-    display_name: Optional[str] = None
+    username: Optional[str] = None
     avatar_url: Optional[str] = None
 
     @classmethod
@@ -51,7 +51,7 @@ class AdminUserResponse(BaseModel):
             "status": user.status,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
-            "display_name": user.profile.display_name if user.profile else None,
+            "username": user.profile.username if user.profile else None,
             "avatar_url": f"{CDN_URL}/{user.profile.avatar_url}" if user.profile else None
         }
         return cls(**data)
@@ -165,7 +165,7 @@ class AdminLoginResponse(BaseModel):
 class CreateUserRequest(BaseModel):
     email: str
     password: str
-    display_name: str
+    username: str
     role: str
 
 class MediaAssetData(BaseModel):
@@ -182,7 +182,7 @@ class AdminPostDetailResponse(BaseModel):
     created_at: Optional[str]
     post_type: int
     user_id: str
-    user_slug: str
-    profile_display_name: Optional[str]
+    user_profile_name: str
+    profile_username: Optional[str]
     profile_avatar_url: Optional[str]
     media_assets: Dict[str, MediaAssetData]
