@@ -17,7 +17,7 @@ router = APIRouter()
 BASE_URL = getenv("CDN_BASE_URL")
 
 @router.get("/", response_model=TopPageResponse)
-def get_top_page_data(db: Session = Depends(get_db)):
+def get_top_page_data(db: Session = Depends(get_db)) -> TopPageResponse:
     """
     トップページ用データを取得
     """

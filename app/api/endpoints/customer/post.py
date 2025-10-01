@@ -195,6 +195,8 @@ async def get_new_arrivals(
         print("新着投稿取得エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# utils
 def _determine_visibility(single: bool, plan: bool) -> int:
     """投稿の可視性を判定する"""
     if single and plan:

@@ -38,27 +38,34 @@ def get_dashboard_info(db: Session) -> Dict[str, Any]:
         total_posts = db.query(Posts).count()
         
         # 身分証申請中件数（status=1が申請中）
-        pending_identity_verifications = db.query(IdentityVerifications).filter(
-            IdentityVerifications.status == 1
-        ).count()
+        pending_identity_verifications = (
+            db.query(IdentityVerifications)
+            .filter(IdentityVerifications.status == 1).count()
+        )
         
         # クリエイター申請中件数（status=1が申請中）
-        pending_creator_applications = db.query(Creators).filter(
-            Creators.status == 1
-        ).count()
+        pending_creator_applications = (
+            db.query(Creators)
+            .filter(Creators.status == 1)
+            .count()
+        )
         
         # 投稿申請中件数（審査待ちの投稿があると仮定してstatus=1）
-        pending_post_reviews = db.query(Posts).filter(
-            Posts.status == 1
-        ).count()
+        pending_post_reviews = (
+            db.query(Posts)
+            .filter(Posts.status == 1)
+            .count()
+        )
         
         # 月間売上（仮の値 - 実際のOrdersテーブルから計算する場合）
         monthly_revenue = 100000
         
         # アクティブな購読数
-        active_subscriptions = db.query(Subscriptions).filter(
-            Subscriptions.status == 1  # アクティブな購読
-        ).count()
+        active_subscriptions = (
+            db.query(Subscriptions)
+            .filter(Subscriptions.status == 1)  # アクティブな購読
+            .count()
+        )
         
         return {
             "total_users": total_users,
