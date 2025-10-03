@@ -1,13 +1,18 @@
 # app/core/security.py
 from passlib.context import CryptContext
-import jwt
 from app.core.config import settings
-import datetime as dt
-import secrets
+import secrets, jwt, httpx, os, datetime as dt, time
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 12
+
+REGION = os.getenv('AWS_DEFAULT_REGION')
+USER_POOL_ID = os.getenv('USER_POOL_ID')
+ISSUER = f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
+AUD = os.getenv('AUD')
+JWKS_URL = f"{ISSUER}/.well-known/jwks.json"
+_cache = {"jwks": None, "exp": 0}
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -78,7 +83,6 @@ def decode_token(token: str) -> dict:
     """
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
 
-
 def new_csrf_token() -> str:
     """
     新しいCSRFトークンを生成する
@@ -87,3 +91,30 @@ def new_csrf_token() -> str:
         str: 新しいCSRFトークン
     """
     return secrets.token_urlsafe(16)
+
+def _get_jwks():
+    """
+    JWKSを取得する
+    """
+    now = time.time()
+    if _cache["jwks"] and now < _cache["exp"]:
+        return _cache["jwks"]
+    _cache["jwks"] = httpx.get(JWKS_URL, timeout=5).json()
+    _cache["exp"] = now + 3600
+    return _cache["jwks"]
+
+def verify_id_token(id_token: str):
+    """
+    IDトークンを検証する
+
+    Args:
+        id_token (str): IDトークン
+
+    Returns:
+        dict: デコードされたトークン
+    """
+    header = jwt.get_unverified_header(id_token)
+    jwks = _get_jwks()
+    key = next(k for k in jwks["keys"] if k["kid"] == header["kid"])
+    claims = jwt.decode(id_token, key, algorithms=["RS256"], audience=AUD, issuer=ISSUER)
+    return claims  # email, sub などを取り出して使う

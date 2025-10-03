@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from fastapi import Request
 
 # ========================
 # ✅ .env スイッチング処理
@@ -45,6 +46,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/api/debug-cookies")
+async def debug_cookies(request: Request):
+    c = request.cookies
+    return {
+        "cognito": {
+            "id_token": "present" if "cognito_id_token" in c else "missing",
+            "access_token": "present" if "cognito_access_token" in c else "missing",
+            "refresh_token": "present" if "cognito_refresh_token" in c else "missing",
+        },
+        "all_cookie_keys": list(c.keys()),  # 何が来てるか一覧
+    }
 
 # CSRF ミドルウェアは CORS より後でOK
 app.add_middleware(CSRFMiddleware)
