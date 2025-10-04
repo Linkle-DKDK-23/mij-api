@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
 from app.models.profiles import Profiles
+from app.models.user import Users
 from uuid import UUID
 from app.schemas.account import AccountUpdateRequest
 from datetime import datetime
+from typing import Optional, Dict
 
 def create_profile(db: Session, user_id: UUID, username: str) -> Profiles:
     """
@@ -29,6 +31,30 @@ def get_profile_by_username(db: Session, username: str) -> Profiles:
     """
     return db.query(Profiles).filter(Profiles.username == username).first()
 
+def get_profile_info_by_user_id(db: Session, user_id: UUID) -> Dict[str, Optional[str]]:
+    """
+    ユーザーIDに紐づくプロフィール情報を取得（profile_name, username, avatar_url, cover_url）
+    """
+    result = (
+        db.query(
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            Profiles.cover_url
+        )
+        .join(Profiles, Users.id == Profiles.user_id)
+        .filter(Users.id == user_id)
+        .first()
+    )
+    
+    if result:
+        profile_name, username, avatar_url, cover_url = result
+        return {
+            "profile_name": profile_name,
+            "username": username,
+            "avatar_url": avatar_url if avatar_url else None,
+            "cover_url": cover_url if cover_url else None
+        }
 def update_profile(db: Session, user_id: UUID, update_data: AccountUpdateRequest) -> Profiles:
     """
     プロフィールを更新

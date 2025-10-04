@@ -19,5 +19,22 @@ class PlanResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class SubscribedPlanResponse(BaseModel):
+    subscription_id: UUID
+    plan_id: UUID
+    plan_name: str
+    plan_description: Optional[str] = None
+    price: int
+    current_period_start: datetime
+    current_period_end: datetime
+    subscription_created_at: datetime
+    subscription_updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class PlanListResponse(BaseModel):
     plans: List[PlanResponse]
+
+class SubscribedPlanListResponse(BaseModel):
+    subscribed_plans: List[SubscribedPlanResponse]
