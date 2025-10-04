@@ -30,8 +30,8 @@ origins = [
     "https://stg.mijfans.jp",
     "https://stg-admin.mijfans.jp",
 
-    # 本番
-    "https://prd-admin.linkle.group",
+    # 本番環境用
+    "https://prd-admin.linkle.group"
 ]
 
 app.add_middleware(

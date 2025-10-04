@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, desc, exists
 from app.models.posts import Posts
 from app.models.social import Likes
@@ -19,6 +19,9 @@ from app.models.media_renditions import MediaRenditions
 from app.api.commons.utils import get_video_duration
 from app.constants.enums import PlanStatus
 from app.models.purchases import Purchases
+
+# エイリアスを定義
+ThumbnailAssets = aliased(MediaAssets)
 
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
@@ -63,55 +66,6 @@ def get_posts_count_by_user_id(db: Session, user_id: UUID) -> dict:
         "deleted_posts_count": deleted_posts_count,
         "approved_posts_count": approved_posts_count
     }
-
-def create_post(db: Session, post_data: dict):
-    """
-    投稿を作成
-    """
-    post = Posts(**post_data)
-    db.add(post)
-    db.flush()
-    return post
-
-def update_post_media_assets(db: Session, post_id: UUID, key: str, kind: str):
-    """
-    投稿のメディアアセットを更新
-    """
-    post = db.query(Posts).filter(Posts.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    
-    # kindを整数値にマッピング
-    kind_mapping = {
-        "ogp": MediaAssetKind.OGP,
-        "thumbnail": MediaAssetKind.THUMBNAIL,
-        "main": MediaAssetKind.MAIN_VIDEO,
-        "sample": MediaAssetKind.SAMPLE_VIDEO,
-        "images": MediaAssetKind.IMAGES,
-    }
-    
-    kind_int = kind_mapping.get(kind)
-    if kind_int is None:
-        raise HTTPException(status_code=400, detail=f"Unsupported kind: {kind}")
-
-    post.updated_at = datetime.now()
-    db.add(post)
-    db.flush()
-    return post
-
-def update_post_status(db: Session, post_id: UUID, status: int):
-    """
-    投稿のステータスを更新
-    """
-    post = db.query(Posts).filter(Posts.id == post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    
-    post.status = status
-    post.updated_at = datetime.now()
-    db.add(post)
-    db.flush()
-    return post
 
 def get_posts_by_category_slug(db: Session, slug: str) -> List[Posts]:
     """
@@ -311,7 +265,83 @@ def get_post_detail_by_id(db: Session, post_id: str, user_id: str | None) -> dic
         **sale_info,
         **media_info
     }
+
+def get_liked_posts_by_user_id(db: Session, user_id: UUID, limit: int = 50) -> List[tuple]:
+    """
+    ユーザーがいいねした投稿を取得（top_crud.pyの121-126行目の項目と合わせる）
+    """
+    return (
+        db.query(
+            Posts,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            ThumbnailAssets.duration_sec.label('duration_sec'),
+            Likes.created_at.label('created_at')
+        )
+        .join(Likes, Posts.id == Likes.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        .filter(Likes.user_id == user_id)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.status == PostStatus.APPROVED)  # 公開済みの投稿のみ
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, ThumbnailAssets.storage_key, ThumbnailAssets.duration_sec, Likes.created_at)
+        .order_by(desc(Likes.created_at))  # いいねした日時の新しい順
+        .limit(limit)
+        .all()
+    )
+
+def create_post(db: Session, post_data: dict):
+    """
+    投稿を作成
+    """
+    post = Posts(**post_data)
+    db.add(post)
+    db.flush()
+    return post
+
+def update_post_media_assets(db: Session, post_id: UUID, key: str, kind: str):
+    """
+    投稿のメディアアセットを更新
+    """
+    post = db.query(Posts).filter(Posts.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
     
+    # kindを整数値にマッピング
+    kind_mapping = {
+        "ogp": MediaAssetKind.OGP,
+        "thumbnail": MediaAssetKind.THUMBNAIL,
+        "main": MediaAssetKind.MAIN_VIDEO,
+        "sample": MediaAssetKind.SAMPLE_VIDEO,
+        "images": MediaAssetKind.IMAGES,
+    }
+    
+    kind_int = kind_mapping.get(kind)
+    if kind_int is None:
+        raise HTTPException(status_code=400, detail=f"Unsupported kind: {kind}")
+
+    post.updated_at = datetime.now()
+    db.add(post)
+    db.flush()
+    return post
+
+def update_post_status(db: Session, post_id: UUID, status: int):
+    """
+    投稿のステータスを更新
+    """
+    post = db.query(Posts).filter(Posts.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    post.status = status
+    post.updated_at = datetime.now()
+    db.add(post)
+    db.flush()
+    return post
+
 def _is_purchased(db: Session, user_id: UUID | None, post_id: UUID) -> bool:
     """
     ユーザーが投稿を購入しているかどうかを判定
