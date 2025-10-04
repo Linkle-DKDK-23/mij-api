@@ -17,3 +17,4 @@ Jinja2
 httpx
 requests-oauthlib
 itsdangerous
+tenacity

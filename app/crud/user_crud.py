@@ -165,3 +165,11 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
         "individual_purchases": individual_purchases,
         "gacha_items": gacha_items
     }
+
+def create_user_by_x(db: Session, user: Users) -> Users:
+    """
+    Xユーザーを作成
+    """
+    db.add(user)
+    db.flush()
+    return user

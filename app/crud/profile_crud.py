@@ -18,6 +18,18 @@ def create_profile(db: Session, user_id: UUID, username: str) -> Profiles:
     db.flush()
     return db_profile
 
+def exist_profile_by_username(db: Session, username: str) -> bool:
+    """
+    ユーザー名に紐づくプロフィールが存在するかを確認
+    
+    Args:
+        db (Session): データベースセッション
+        username (str): ユーザー名
+        
+    Returns:
+        bool: プロフィールが存在する場合はTrue、存在しない場合はFalse
+    """
+    return db.query(Profiles).filter(Profiles.username == username).first() is not None
 
 def get_profile_by_user_id(db: Session, user_id: UUID) -> Profiles:
     """
@@ -55,6 +67,7 @@ def get_profile_info_by_user_id(db: Session, user_id: UUID) -> Dict[str, Optiona
             "avatar_url": avatar_url if avatar_url else None,
             "cover_url": cover_url if cover_url else None
         }
+
 def update_profile(db: Session, user_id: UUID, update_data: AccountUpdateRequest) -> Profiles:
     """
     プロフィールを更新
@@ -65,6 +78,14 @@ def update_profile(db: Session, user_id: UUID, update_data: AccountUpdateRequest
     profile.links = update_data.links
     profile.avatar_url = update_data.avatar_url
     profile.cover_url = update_data.cover_url
+    profile.updated_at = datetime.now()
+    db.add(profile)
+    db.flush()
+    return profile
+
+def update_profile_by_x(db: Session, user_id: UUID, username: str):
+    profile = db.query(Profiles).filter(Profiles.user_id == user_id).first()
+    profile.username = username
     profile.updated_at = datetime.now()
     db.add(profile)
     db.flush()

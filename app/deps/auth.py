@@ -26,7 +26,6 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-
 def get_current_user_optional(
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None, alias=ACCESS_COOKIE),
@@ -43,7 +42,6 @@ def get_current_user_optional(
         return user
     except Exception:
         return None
-
 
 def get_current_admin_user(
     db: Session = Depends(get_db),

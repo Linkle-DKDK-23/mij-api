@@ -22,6 +22,9 @@ from app.deps.auth import get_current_user
 from datetime import datetime, timedelta
 from requests_oauthlib import OAuth1Session
 from app.deps.auth import issue_app_jwt_for
+from app.crud.user_crud import create_user_by_x
+from app.crud.profile_crud import create_profile, update_profile_by_x, exist_profile_by_username, get_profile_by_username
+from app.constants.enums import AccountType, AccountStatus
 
 router = APIRouter()
 
@@ -29,8 +32,8 @@ X_API_KEY = os.getenv('X_API_KEY')
 X_API_SECRET = os.getenv('X_API_SECRET')
 X_CALLBACK_URL = os.getenv('X_CALLBACK_URL')
 
-OAUTH_BASE = "https://api.twitter.com"  # ← OAuth1はこれで統一
-USERS_BASE = "https://api.twitter.com"  # v2ユーザー情報も統一
+OAUTH_BASE = "https://api.twitter.com"
+USERS_BASE = "https://api.twitter.com"
 
 @router.post("/login", response_model=LoginCookieOut)
 def login(payload: LoginIn, response: Response, db: Session = Depends(get_db)):
@@ -84,11 +87,6 @@ def x_login(request: Request):
         x = OAuth1Session(X_API_KEY, X_API_SECRET, callback_uri=X_CALLBACK_URL)
         res = x.post(f"{OAUTH_BASE}/oauth/request_token")
 
-        # デバッグログ
-        print("----- request_token -----")
-        print("status:", res.status_code)
-        print("body  :", res.text)
-
         if res.status_code != 200:
             raise HTTPException(400, f"request_token error: {res.status_code} {res.text}")
 
@@ -122,6 +120,21 @@ def x_callback(
 ):
     """
     Xログインコールバック → access_token交換 → ユーザー情報取得 → DB保存/更新 → Cookie設定 → リダイレクト
+
+    Args:
+        request (Request): リクエスト
+        oauth_verifier (str): OAuth verifier
+        oauth_token (str): OAuth token
+        db (Session): データベースセッション
+
+    Returns:
+        RedirectResponse: リダイレクト
+
+    Raises:
+        HTTPException: エラー
+
+    Returns:
+        dict: ユーザー情報
     """
     try:
         sess = request.session
@@ -131,10 +144,6 @@ def x_callback(
         # access_token 交換
         x = OAuth1Session(X_API_KEY, X_API_SECRET, sess["oauth_token"], sess["oauth_token_secret"])
         res = x.post(f"{OAUTH_BASE}/oauth/access_token", data={"oauth_verifier": oauth_verifier})
-
-        print("----- access_token -----")
-        print("status:", res.status_code)
-        print("body  :", res.text)
 
         if res.status_code != 200:
             raise HTTPException(400, f"access_token error: {res.status_code} {res.text}")
@@ -153,52 +162,60 @@ def x_callback(
         x_user_id = me.get("id")
         x_username = me.get("username")
         x_name = me.get("name")
-        x_profile_image_url = me.get("profile_image_url")
 
         # メールアドレスの構築（Xは公開メールがないため仮のメールを生成）
         x_email = f"{x_user_id}@x.twitter.com"
 
-        # 既存ユーザーチェック（メールアドレスで検索）
-        from app.models.profiles import Profiles
-        user = get_user_by_email(db, x_email)
+        # 既存ユーザーチェック（ユーザー名で検索）
+        profile_exists = exist_profile_by_username(db, x_username)
 
-        if user:
-            # 既存ユーザーの場合、ユーザー情報を更新
-            user.last_login_at = datetime.utcnow()
-            if x_name:
-                user.profile_name = x_name
-
-            # プロフィール情報も更新
-            profile = db.query(Profiles).filter(Profiles.user_id == user.id).first()
-            if profile and x_username:
-                profile.username = x_username
-
-            db.commit()
-        else:
+        if not profile_exists:
             # 新規ユーザー作成
-            from app.constants.enums import AccountType, AccountStatus
-
             user = Users(
                 profile_name=x_name,  # Xの名前
                 email=x_email,
                 email_verified_at=datetime.utcnow(),
-                password_hash=None,  # X認証のためパスワードなし
+                password_hash=None,
                 role=AccountType.GENERAL_USER,
                 status=AccountStatus.ACTIVE,
                 last_login_at=datetime.utcnow()
             )
-            db.add(user)
-            db.flush()
+            user = create_user_by_x(db, user)
+            print(f"DEBUG: New user created, user.id = {user.id}")
 
             # プロフィール作成
-            profile = Profiles(
-                user_id=user.id,
-                username=x_username  # Xの@xxxxx
-            )
-            db.add(profile)
+            profile = create_profile(db, user.id, x_username)
+            db.commit()
+            db.refresh(user)
+            db.refresh(profile)
+        else:
+            # 既存ユーザーの場合、ユーザー情報を取得して更新
+            # プロフィールからユーザーIDを取得
+            profile = get_profile_by_username(db, x_username)
+            if profile is None:
+                raise HTTPException(status_code=404, detail="Profile not found")
+            
+            user = get_user_by_id(db, profile.user_id)
+            print(f"DEBUG: Existing user found, user.id = {user.id if user else 'None'}")
+            if user is None:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # ユーザー情報を更新
+            user.last_login_at = datetime.utcnow()
+            if x_name:
+                user.profile_name = x_name
+            
+            # プロフィール情報も更新
+            profile = update_profile_by_x(db, user.id, x_username)
             db.commit()
 
         # JWT & Cookie設定（通常ログインと同じ処理）
+        print(f"DEBUG: user type = {type(user)}, user = {user}")
+        if hasattr(user, 'id'):
+            print(f"DEBUG: user.id = {user.id}")
+        else:
+            print("DEBUG: user has no 'id' attribute")
+        
         access_token = create_access_token(str(user.id))
         refresh_token = create_refresh_token(str(user.id))
         csrf = new_csrf_token()
@@ -262,8 +279,6 @@ def logout(response: Response):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
 @router.post("/refresh")
 def refresh_token(request: Request, response: Response):
     refresh = request.cookies.get(REFRESH_COOKIE)
@@ -300,7 +315,6 @@ def refresh_token(request: Request, response: Response):
     )
     return {"message": "refreshed", "csrf_token": new_csrf}
 
-
 @router.get("/csrf")
 def get_csrf_token(request: Request):
     csrf = request.cookies.get(CSRF_COOKIE)
@@ -312,7 +326,6 @@ def get_csrf_token(request: Request):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing CSRF token")
     
     return "ok"
-
 
 @router.get("/auth/callback")
 async def auth_callback(code: str):
