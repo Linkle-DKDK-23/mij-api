@@ -6,7 +6,7 @@ from app.core.security import decode_token
 from app.core.cookies import ACCESS_COOKIE
 from app.models.user import Users
 from app.crud.user_crud import get_user_by_id
-
+import time, os, jwt
 
 def get_current_user(
     db: Session = Depends(get_db),
@@ -93,3 +93,14 @@ def get_current_admin_user(
         )
     
     return user
+
+def issue_app_jwt_for(x_user_id: str, handle: str|None, name: str|None):
+    payload = {
+        "sub": x_user_id,
+        "handle": handle,
+        "name": name,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 60*60*24*7,  # 7日
+        "provider": "x"
+    }
+    return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")

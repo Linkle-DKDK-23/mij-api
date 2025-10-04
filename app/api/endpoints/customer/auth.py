@@ -1,4 +1,7 @@
+import os, httpx
+import urllib.parse as up
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Response, Request
+from fastapi.responses import RedirectResponse, JSONResponse
 from app.core.security import create_access_token, decode_token
 from app.db.base import get_db
 from app.schemas.auth import LoginIn, TokenOut, LoginCookieOut
@@ -17,9 +20,17 @@ from app.core.cookies import set_auth_cookies, clear_auth_cookies, REFRESH_COOKI
 from app.core.config import settings
 from app.deps.auth import get_current_user
 from datetime import datetime, timedelta
-import os, httpx
+from requests_oauthlib import OAuth1Session
+from app.deps.auth import issue_app_jwt_for
 
 router = APIRouter()
+
+X_API_KEY = os.getenv('X_API_KEY')
+X_API_SECRET = os.getenv('X_API_SECRET')
+X_CALLBACK_URL = os.getenv('X_CALLBACK_URL')
+
+OAUTH_BASE = "https://api.twitter.com"  # ← OAuth1はこれで統一
+USERS_BASE = "https://api.twitter.com"  # v2ユーザー情報も統一
 
 @router.post("/login", response_model=LoginCookieOut)
 def login(payload: LoginIn, response: Response, db: Session = Depends(get_db)):
@@ -63,6 +74,146 @@ def login(payload: LoginIn, response: Response, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/x/login")
+def x_login(request: Request):
+    """
+    Xログイン画面へリダイレクト
+    """
+    try:
+        x = OAuth1Session(X_API_KEY, X_API_SECRET, callback_uri=X_CALLBACK_URL)
+        res = x.post(f"{OAUTH_BASE}/oauth/request_token")
+
+        # デバッグログ
+        print("----- request_token -----")
+        print("status:", res.status_code)
+        print("body  :", res.text)
+
+        if res.status_code != 200:
+            raise HTTPException(400, f"request_token error: {res.status_code} {res.text}")
+
+        tokens = dict(up.parse_qsl(res.text))
+        if "oauth_token" not in tokens or "oauth_token_secret" not in tokens:
+            raise HTTPException(400, f"invalid payload: {res.text}")
+
+        # セッション退避
+        request.session["oauth_token"] = tokens["oauth_token"]
+        request.session["oauth_token_secret"] = tokens["oauth_token_secret"]
+
+        # 認可URL（選択肢）
+        auth_path = "authenticate"
+        params = {"oauth_token": tokens["oauth_token"]}
+
+        auth_url = f"{OAUTH_BASE}/oauth/authorize?{up.urlencode({'oauth_token': tokens['oauth_token']})}"
+        return RedirectResponse(auth_url, status_code=302)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Xログイン画面へリダイレクトに失敗:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/x/callback")
+def x_callback(
+    request: Request,
+    oauth_verifier: str,
+    oauth_token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Xログインコールバック → access_token交換 → ユーザー情報取得 → DB保存/更新 → Cookie設定 → リダイレクト
+    """
+    try:
+        sess = request.session
+        if oauth_token != sess.get("oauth_token"):
+            raise HTTPException(400, "state mismatch")
+
+        # access_token 交換
+        x = OAuth1Session(X_API_KEY, X_API_SECRET, sess["oauth_token"], sess["oauth_token_secret"])
+        res = x.post(f"{OAUTH_BASE}/oauth/access_token", data={"oauth_verifier": oauth_verifier})
+
+        print("----- access_token -----")
+        print("status:", res.status_code)
+        print("body  :", res.text)
+
+        if res.status_code != 200:
+            raise HTTPException(400, f"access_token error: {res.status_code} {res.text}")
+
+        access = dict(up.parse_qsl(res.text))
+        if "oauth_token" not in access or "oauth_token_secret" not in access:
+            raise HTTPException(400, f"invalid access payload: {res.text}")
+
+        # ユーザー情報（v2）
+        x_user = OAuth1Session(X_API_KEY, X_API_SECRET, access["oauth_token"], access["oauth_token_secret"])
+        me_res = x_user.get(f"{USERS_BASE}/2/users/me?user.fields=profile_image_url,verified")
+        if me_res.status_code != 200:
+            raise HTTPException(400, f"users/me error: {me_res.status_code} {me_res.text}")
+        me = me_res.json().get("data", {})
+
+        x_user_id = me.get("id")
+        x_username = me.get("username")
+        x_name = me.get("name")
+        x_profile_image_url = me.get("profile_image_url")
+
+        # メールアドレスの構築（Xは公開メールがないため仮のメールを生成）
+        x_email = f"{x_user_id}@x.twitter.com"
+
+        # 既存ユーザーチェック（メールアドレスで検索）
+        from app.models.profiles import Profiles
+        user = get_user_by_email(db, x_email)
+
+        if user:
+            # 既存ユーザーの場合、ユーザー情報を更新
+            user.last_login_at = datetime.utcnow()
+            if x_name:
+                user.profile_name = x_name
+
+            # プロフィール情報も更新
+            profile = db.query(Profiles).filter(Profiles.user_id == user.id).first()
+            if profile and x_username:
+                profile.username = x_username
+
+            db.commit()
+        else:
+            # 新規ユーザー作成
+            from app.constants.enums import AccountType, AccountStatus
+
+            user = Users(
+                profile_name=x_name,  # Xの名前
+                email=x_email,
+                email_verified_at=datetime.utcnow(),
+                password_hash=None,  # X認証のためパスワードなし
+                role=AccountType.GENERAL_USER,
+                status=AccountStatus.ACTIVE,
+                last_login_at=datetime.utcnow()
+            )
+            db.add(user)
+            db.flush()
+
+            # プロフィール作成
+            profile = Profiles(
+                user_id=user.id,
+                username=x_username  # Xの@xxxxx
+            )
+            db.add(profile)
+            db.commit()
+
+        # JWT & Cookie設定（通常ログインと同じ処理）
+        access_token = create_access_token(str(user.id))
+        refresh_token = create_refresh_token(str(user.id))
+        csrf = new_csrf_token()
+
+        # フロントエンドのX認証コールバックページにリダイレクト
+        frontend_url = os.getenv("FRONTEND_URL")
+        redirect_response = RedirectResponse(url=f"{frontend_url}/auth/x/callback", status_code=302)
+
+        # RedirectResponseに直接Cookieを設定
+        set_auth_cookies(redirect_response, access_token, refresh_token, csrf)
+
+        return redirect_response
+    except Exception as e:
+        print("Xログインコールバックに失敗しました", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 認可テスト用の /auth/me
 @router.get("/me")
