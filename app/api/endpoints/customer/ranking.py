@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.base import get_db
-from app.crud.ranking_crud import (
+from app.crud.post_crud import (
     get_ranking_posts_all_time,
     get_ranking_posts_monthly,
     get_ranking_posts_weekly,

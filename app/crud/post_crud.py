@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, desc, exists
 from app.models.posts import Posts
-from app.models.social import Likes
+from app.models.social import Likes, Bookmarks, Comments
 from uuid import UUID
 from datetime import datetime
 from app.constants.enums import PostStatus, MediaAssetKind
@@ -19,6 +19,7 @@ from app.models.media_renditions import MediaRenditions
 from app.api.commons.utils import get_video_duration
 from app.constants.enums import PlanStatus
 from app.models.purchases import Purchases
+from datetime import datetime, timedelta
 
 # エイリアスを定義
 ThumbnailAssets = aliased(MediaAssets)
@@ -289,6 +290,245 @@ def get_liked_posts_by_user_id(db: Session, user_id: UUID, limit: int = 50) -> L
         .filter(Posts.status == PostStatus.APPROVED)  # 公開済みの投稿のみ
         .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, ThumbnailAssets.storage_key, ThumbnailAssets.duration_sec, Likes.created_at)
         .order_by(desc(Likes.created_at))  # いいねした日時の新しい順
+        .limit(limit)
+        .all()
+    )
+
+def get_bookmarked_posts_by_user_id(db: Session, user_id: UUID) -> List[tuple]:
+    """
+    ユーザーがブックマークした投稿を取得
+    """
+    return (
+        db.query(
+            Posts,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            ThumbnailAssets.duration_sec,
+            func.count(func.distinct(Likes.user_id)).label('likes_count'),
+            func.count(func.distinct(Comments.id)).label('comments_count'),
+            Bookmarks.created_at.label('bookmarked_at')
+        )
+        .join(Bookmarks, Posts.id == Bookmarks.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .outerjoin(Comments, Posts.id == Comments.post_id)
+        .filter(Bookmarks.user_id == user_id)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(
+            Posts.id,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key,
+            ThumbnailAssets.duration_sec,
+            Bookmarks.created_at
+        )
+        .order_by(desc(Bookmarks.created_at))
+        .all()
+    )
+
+def get_liked_posts_list_by_user_id(db: Session, user_id: UUID) -> List[tuple]:
+    """
+    ユーザーがいいねした投稿一覧を取得（カード表示用）
+    """
+    return (
+        db.query(
+            Posts,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            ThumbnailAssets.duration_sec,
+            func.count(func.distinct(Likes.user_id)).label('likes_count'),
+            func.count(func.distinct(Comments.id)).label('comments_count'),
+            Likes.created_at.label('liked_at')
+        )
+        .join(Likes, Posts.id == Likes.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Comments, Posts.id == Comments.post_id)
+        .filter(Likes.user_id == user_id)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(
+            Posts.id,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key,
+            ThumbnailAssets.duration_sec,
+            Likes.created_at
+        )
+        .order_by(desc(Likes.created_at))
+        .all()
+    )
+
+def get_bought_posts_by_user_id(db: Session, user_id: UUID) -> List[tuple]:
+    """
+    ユーザーが購入した投稿を取得
+    """
+    # サブクエリで投稿ごとの最新購入日時を取得（投稿IDのみでグループ化）
+    latest_purchases = (
+        db.query(
+            Posts.id.label('post_id'),
+            func.max(Purchases.created_at).label('latest_purchase_at')
+        )
+        .select_from(Purchases)
+        .join(Plans, Purchases.plan_id == Plans.id)
+        .join(PostPlans, Plans.id == PostPlans.plan_id)
+        .join(Posts, PostPlans.post_id == Posts.id)
+        .filter(Purchases.user_id == user_id)
+        .filter(Purchases.deleted_at.is_(None))
+        .group_by(Posts.id)
+        .subquery()
+    )
+
+    return (
+        db.query(
+            Posts,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            ThumbnailAssets.duration_sec,
+            func.count(func.distinct(Likes.user_id)).label('likes_count'),
+            func.count(func.distinct(Comments.id)).label('comments_count'),
+            latest_purchases.c.latest_purchase_at.label('purchased_at')
+        )
+        .select_from(Posts)
+        .join(latest_purchases, Posts.id == latest_purchases.c.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .outerjoin(Comments, Posts.id == Comments.post_id)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(
+            Posts.id,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key,
+            ThumbnailAssets.duration_sec,
+            latest_purchases.c.latest_purchase_at
+        )
+        .order_by(desc(latest_purchases.c.latest_purchase_at))
+        .all()
+    )
+
+def get_ranking_posts_all_time(db: Session, limit: int = 500):
+    """
+    全期間でいいね数が多い投稿を取得
+    """
+    return (
+        db.query(
+            Posts,
+            func.count(Likes.post_id).label('likes_count'),
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        # TODO: 公開済みの投稿のみにする
+        .filter(Posts.status == PostStatus.APPROVED)  # 公開済みの投稿のみ
+        .filter(Posts.deleted_at.is_(None))  # 削除されていない投稿のみ
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
+        .order_by(desc('likes_count'))
+        .limit(limit)
+        .all()
+    )
+
+def get_ranking_posts_monthly(db: Session, limit: int = 50):
+    """
+    月間でいいね数が多い投稿を取得
+    """
+    one_month_ago = datetime.now() - timedelta(days=30)
+    
+    return (
+        db.query(
+            Posts,
+            func.count(Likes.post_id).label('likes_count'),
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        # .filter(Posts.status == PostStatus.APPROVED)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.created_at >= one_month_ago)  # 過去30日以内のいいね
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
+        .order_by(desc('likes_count'))
+        .limit(limit)
+        .all()
+    )
+
+def get_ranking_posts_weekly(db: Session, limit: int = 50):
+    """
+    週間でいいね数が多い投稿を取得
+    """
+    one_week_ago = datetime.now() - timedelta(days=7)
+    
+    return (
+        db.query(
+            Posts,
+            func.count(Likes.post_id).label('likes_count'),
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .filter(Posts.status == PostStatus.APPROVED)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.created_at >= one_week_ago)  # 過去7日以内のいいね
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
+        .order_by(desc('likes_count'))
+        .limit(limit)
+        .all()
+    )
+
+def get_ranking_posts_daily(db: Session, limit: int = 50):
+    """
+    日間でいいね数が多い投稿を取得
+    """
+    one_day_ago = datetime.now() - timedelta(days=1)
+    
+    return (
+        db.query(
+            Posts,
+            func.count(Likes.post_id).label('likes_count'),
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            MediaAssets.storage_key.label('thumbnail_key')
+        )
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(MediaAssets, (Posts.id == MediaAssets.post_id) & (MediaAssets.kind == MediaAssetKind.THUMBNAIL))
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .filter(Posts.status == PostStatus.APPROVED)
+        .filter(Posts.deleted_at.is_(None))
+        .filter(Posts.created_at >= one_day_ago)  # 過去1日以内のいいね
+        .group_by(Posts.id, Users.profile_name, Profiles.username, Profiles.avatar_url, MediaAssets.storage_key)
+        .order_by(desc('likes_count'))
         .limit(limit)
         .all()
     )

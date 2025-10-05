@@ -93,6 +93,31 @@ class AccountUpdateResponse(BaseModel):
     message: str
     success: bool
 
+class PostCardResponse(BaseModel):
+    id: UUID
+    thumbnail_url: Optional[str] = None
+    title: str
+    creator_avatar: Optional[str] = None
+    creator_name: str
+    creator_username: str
+    likes_count: int
+    comments_count: int
+    duration: Optional[str] = None
+    is_video: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BookmarkedPostsResponse(BaseModel):
+    bookmarks: List[PostCardResponse]
+
+class LikedPostsListResponse(BaseModel):
+    liked_posts: List[PostCardResponse]
+
+class BoughtPostsResponse(BaseModel):
+    bought_posts: List[PostCardResponse]
+
 class AccountPostResponse(BaseModel):
     id: str
     description: str
