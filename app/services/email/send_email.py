@@ -1,12 +1,16 @@
 # app/services/email/send_email.py
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Mapping
 import smtplib
 import boto3
 from botocore.config import Config
 from tenacity import retry, wait_exponential, stop_after_attempt
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from itsdangerous import URLSafeSerializer
 from app.core.config import settings  # pydantic Settings想定
+import os
+
 
 # ---------- Jinja2 ----------
 jinja_env = Environment(
@@ -80,3 +84,55 @@ def send_thanks_email(to: str, name: str | None = None) -> None:
             raise RuntimeError(f"Unsupported EMAIL_BACKEND: {backend}")
     except Exception as e:
         print("Error sending email", e)
+
+# ---------- 汎用テンプレ送信（HTML + TEXT自動生成オプション） ----------
+def send_templated_email(
+    to: str,
+    subject: str,
+    template_html: str,
+    ctx: Mapping[str, object],
+) -> None:
+    """
+    Jinja2テンプレを使ってメール送信（バックエンドは .env の設定で切替）
+    """
+    if not getattr(settings, "EMAIL_ENABLED", True):
+        return
+
+    html = render(template_html, **ctx)
+
+    backend = getattr(settings, "EMAIL_BACKEND", "mailhog").lower()
+    try:
+        if backend == "mailhog":
+            raw = _build_mime(subject, settings.MAIL_FROM, to, html)
+            with smtplib.SMTP(settings.MAILHOG_HOST, settings.MAILHOG_PORT) as s:
+                s.sendmail(settings.MAIL_FROM, [to], raw)
+        elif backend == "ses":
+            _send_via_ses_simple(to, subject, html)
+        else:
+            raise RuntimeError(f"Unsupported EMAIL_BACKEND: {backend}")
+    except Exception as e:
+        # ログだけ出して上位にエラーを伝播させたくない場合はここで握りつぶす方針でもOK
+        print("Error sending email", e)
+
+
+# ---------- 認証メール専用API ----------
+def send_email_verification(to: str, verify_url: str, display_name: str | None = None) -> None:
+    """
+    新規登録後 or 再送時に使う「メール認証」メール。
+    """
+    subject = "【mijfans】メールアドレスの確認をお願いします"
+    ctx = {
+        "name": display_name or "",
+        "verify_url": verify_url,
+        "brand": "mijfans",
+        "support_email": os.getenv("SUPPORT_EMAIL"),
+        "expire_hours": os.getenv("EMAIL_VERIFY_TTL_HOURS"),
+    }
+
+    # HTMLテンプレは必須。TEXTは任意（存在すれば自動で添付）
+    send_templated_email(
+        to=to,
+        subject=subject,
+        template_html="verify_email.html",
+        ctx=ctx,
+    )

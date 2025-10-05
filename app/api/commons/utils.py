@@ -1,5 +1,9 @@
 import random
 import string
+import base64
+import hashlib
+import os
+
 
 def generate_code(length: int = 5) -> str:
     """
@@ -29,3 +33,8 @@ def get_video_duration(duration_sec: float) -> str:
     minutes = rounded_sec // 60
     seconds = rounded_sec % 60
     return f"{minutes:02d}:{seconds:02d}"
+
+def generate_email_verification_token() -> tuple[str, str]:
+    raw = base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")
+    token_hash = hashlib.sha256(raw.encode()).hexdigest()
+    return raw, token_hash

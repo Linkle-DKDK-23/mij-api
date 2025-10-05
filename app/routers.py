@@ -6,7 +6,7 @@ from app.api.endpoints.customer import (
     identity, media_assets, videos, users, auth,
     creater, gender, plans, categories, post,
     transcode_mc, top, category, ranking, social,
-    purchases, preregistrations, account
+    purchases, preregistrations, account, auth_email_verify
 )
 
 # Admin routes
@@ -37,6 +37,8 @@ api_router.include_router(ranking.router, prefix="/ranking", tags=["Ranking"])
 api_router.include_router(social.router, prefix="/social", tags=["Social"])
 api_router.include_router(purchases.router, prefix="/purchases", tags=["Purchases"])
 api_router.include_router(preregistrations.router, prefix="/preregistrations", tags=["Preregistrations"])
+api_router.include_router(auth_email_verify.router, prefix="/auth/email", tags=["Auth Email"])
+
 
 # Admin routes
 api_router.include_router(admin_auth.router, prefix="/admin/auth", tags=["Admin Auth"])
