@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
 from app.schemas.commons import PresignResponseItem
+from app.schemas.purchases import SinglePurchaseResponse
 from app.models.posts import Posts
 
 Kind = Literal["avatar", "cover"]
@@ -55,10 +56,9 @@ class PlanInfo(BaseModel):
     total_price: int
     subscribed_plan_count: int
     subscribed_total_price: int
-    subscribed_plan_names: List[str] = []
     subscribed_plan_details: List[dict] = []
     single_purchases_count: int
-    single_purchases_data: List[dict] = []
+    single_purchases_data: List[SinglePurchaseResponse] = []
 
 class PlansSubscribedInfo(BaseModel):
     plan_count: int

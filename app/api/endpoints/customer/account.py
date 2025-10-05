@@ -124,7 +124,6 @@ def get_account_info(
             total_price=plan_data["total_price"] if plan_data else 0,
             subscribed_plan_count=plan_data["subscribed_plan_count"] if plan_data else 0,
             subscribed_total_price=plan_data["subscribed_total_price"] if plan_data else 0,
-            subscribed_plan_names=plan_data["subscribed_plan_names"] if plan_data else [],
             subscribed_plan_details=plan_data["subscribed_plan_details"] if plan_data else [],
             single_purchases_count=single_purchases_count if single_purchases_count else 0,
             single_purchases_data=single_purchases_data if single_purchases_data else [],

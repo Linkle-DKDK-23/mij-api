@@ -58,14 +58,16 @@ def get_user_by_email(db: Session, email: str) -> Users:
     Returns:
         Users: ユーザー情報
     """
-    return db.scalar(select(Users).where(Users.email == email))
+    return (
+        db.scalar(
+            select(Users)
+            .where(Users.email == email, Users.is_email_verified == True))
+        )
 
 def get_user_profile_by_username(db: Session, username: str) -> dict:
     """
     ユーザー名によるユーザープロフィール取得（関連データ含む）
     """
-
-
     profile = get_profile_by_username(db, username)
 
     if not profile:

@@ -181,7 +181,6 @@ def x_callback(
                 last_login_at=datetime.utcnow()
             )
             user = create_user_by_x(db, user)
-            print(f"DEBUG: New user created, user.id = {user.id}")
 
             # プロフィール作成
             profile = create_profile(db, user.id, x_username)

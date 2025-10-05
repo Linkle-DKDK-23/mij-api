@@ -12,49 +12,44 @@ def get_plan_by_user_id(db: Session, user_id: UUID) -> dict:
     """
     ユーザーが加入中のプラン数と詳細を取得
     """
-    # 現在の日時を取得
-    current_time = datetime.now()
-    
-    # 加入中のプランを取得
-    subscribed_subscriptions = (
-        db.query(Subscriptions)
-        .join(Plans, Subscriptions.plan_id == Plans.id)
+    from app.models.purchases import Purchases
+
+    # 購入したサブスクリプションプラン（type=2）を取得
+    subscribed_purchases = (
+        db.query(Purchases)
+        .join(Plans, Purchases.plan_id == Plans.id)
         .join(Prices, Plans.id == Prices.plan_id)
         .filter(
-            Subscriptions.user_id == user_id,
-            Subscriptions.status == 1,  # アクティブなサブスクリプション
-            Subscriptions.canceled_at.is_(None),  # キャンセルされていない
-            Subscriptions.current_period_end > current_time,  # 期間内
-            Plans.type == PlanStatus.PLAN,  # プランタイプ
-            Plans.deleted_at.is_(None)  # 削除されていないプラン
+            Purchases.user_id == user_id,
+            Plans.type == PlanStatus.PLAN,  # サブスクリプションプラン（type=2）
+            Plans.deleted_at.is_(None),  # 削除されていないプラン
+            Purchases.deleted_at.is_(None)  # 削除されていない購入
         )
         .all()
     )
-    
-    subscribed_plan_count = len(subscribed_subscriptions)
+
+    subscribed_plan_count = len(subscribed_purchases)
     subscribed_total_price = 0
     subscribed_plan_names = []
     subscribed_plan_details = []
-    
+
     # 加入中のプランの詳細情報を取得
-    for subscription in subscribed_subscriptions:
-        price = db.query(Prices).filter(Prices.plan_id == subscription.plan_id).first()
+    for purchase in subscribed_purchases:
+        price = db.query(Prices).filter(Prices.plan_id == purchase.plan_id).first()
         if price:
             subscribed_total_price += price.price
-            subscribed_plan_names.append(subscription.plan.name)
-            
+            subscribed_plan_names.append(purchase.plan.name)
+
             # 詳細情報を追加
             subscribed_plan_details.append({
-                "subscription_id": subscription.id,
-                "plan_id": subscription.plan.id,
-                "plan_name": subscription.plan.name,
-                "plan_description": subscription.plan.description,
+                "purchase_id": str(purchase.id),
+                "plan_id": str(purchase.plan.id),
+                "plan_name": purchase.plan.name,
+                "plan_description": purchase.plan.description,
                 "price": price.price,
-                "current_period_start": subscription.current_period_start,
-                "current_period_end": subscription.current_period_end,
-                "subscription_created_at": subscription.created_at
+                "purchase_created_at": purchase.created_at
             })
-    
+
     return {
         "plan_count": subscribed_plan_count,
         "total_price": subscribed_total_price,
