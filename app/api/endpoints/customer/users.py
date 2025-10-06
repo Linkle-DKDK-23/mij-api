@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from app.schemas.user import UserCreate, UserOut, UserProfileResponse
 from app.db.base import get_db
 from sqlalchemy.orm import Session
@@ -14,6 +14,9 @@ from app.crud.profile_crud import create_profile
 from app.schemas.user import ProfilePostResponse, ProfilePlanResponse, ProfilePurchaseResponse, ProfileGachaResponse
 from app.models.posts import Posts
 import os
+from app.crud.email_verification_crud import issue_verification_token
+from app.services.email.send_email import send_email_verification
+from app.core.config import settings
 router = APIRouter()
 
 BASE_URL = os.getenv("CDN_BASE_URL")
@@ -21,7 +24,8 @@ BASE_URL = os.getenv("CDN_BASE_URL")
 @router.post("/register", response_model=UserOut)
 def register_user(
     user_create: UserCreate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    background: BackgroundTasks = BackgroundTasks()
 ):
     """
     ユーザー登録
@@ -53,6 +57,12 @@ def register_user(
 
         db_user = create_user(db, user_create)
         db_profile = create_profile(db, db_user.id, username_code)
+
+
+        # メールアドレスの認証トークンを発行
+        raw, expires_at = issue_verification_token(db, db_user.id)
+        verify_url = f"{os.getenv('FRONTEND_URL')}/auth/verify-email?token={raw}"
+        background.add_task(send_email_verification, db_user.email, verify_url, db_user.display_name if hasattr(db_user, "display_name") else None)
 
         db.commit()
         db.refresh(db_user)

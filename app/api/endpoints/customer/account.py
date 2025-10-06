@@ -6,24 +6,43 @@ from app.deps.auth import get_current_user
 from app.models.user import Users
 from app.schemas.account import (
     Kind,
-    AccountInfoResponse, 
-    AccountUpdateRequest, 
-    AccountUpdateResponse, 
-    AvatarPresignRequest, 
+    AccountInfoResponse,
+    AccountUpdateRequest,
+    AccountUpdateResponse,
+    AvatarPresignRequest,
     AccountPresignResponse,
     AccountPostStatusResponse,
     AccountPostResponse,
+    LikedPostResponse,
+    ProfileInfo,
+    SocialInfo,
+    PostsInfo,
+    SalesInfo,
+    PlanInfo,
+    PlansSubscribedInfo,
+    PostCardResponse,
+    BookmarkedPostsResponse,
+    LikedPostsListResponse,
+    BoughtPostsResponse,
 )
 from app.schemas.commons import UploadItem, PresignResponseItem
 from app.crud.followes_crud import get_follower_count
-from app.crud.post_crud import get_total_likes_by_user_id, get_posts_count_by_user_id,get_post_status_by_user_id
+from app.crud.post_crud import (
+    get_total_likes_by_user_id,
+    get_posts_count_by_user_id,
+    get_post_status_by_user_id,
+    get_liked_posts_by_user_id,
+    get_bookmarked_posts_by_user_id,
+    get_liked_posts_list_by_user_id,
+    get_bought_posts_by_user_id
+)
 from app.crud.sales_crud import get_total_sales
-from app.crud.plan_crud import get_plan_counts
+from app.crud.plan_crud import get_plan_by_user_id
+from app.crud.purchases_crud import get_single_purchases_count_by_user_id, get_single_purchases_by_user_id
 from app.crud.user_crud import check_profile_name_exists, update_user
-from app.crud.profile_crud import get_profile_by_user_id
+from app.crud.profile_crud import get_profile_by_user_id, get_profile_info_by_user_id, update_profile
 from app.services.s3.keygen import account_asset_key
 from app.services.s3.presign import presign_put_public
-from app.crud.profile_crud import update_profile
 import os
 
 router = APIRouter()
@@ -36,56 +55,130 @@ def get_account_info(
 ):
     """
     アカウント情報を取得
+
+    Args:
+        current_user (Users): 現在のユーザー
+        db (Session): データベースセッション
+
+    Returns:
+        AccountInfoResponse: アカウント情報
+
+    Raises:
+        HTTPException: エラーが発生した場合
     """
     try:
-        profile = get_profile_by_user_id(db, current_user.id)
 
-        follower_data = get_follower_count(db, current_user.id)
-        
+        # プロフィール情報
+        profile_info_data = get_profile_info_by_user_id(db, current_user.id)
+        profile_info = ProfileInfo(
+            profile_name=profile_info_data["profile_name"] or "",
+            username=profile_info_data["username"] or "",
+            avatar_url=f"{BASE_URL}/{profile_info_data['avatar_url']}" if profile_info_data["avatar_url"] else None,
+            cover_url=f"{BASE_URL}/{profile_info_data['cover_url']}" if profile_info_data["cover_url"] else None,
+        )
+
+        # いいね数とタプルをLikedPostResponseオブジェクトに変換
         total_likes = get_total_likes_by_user_id(db, current_user.id)
+        liked_posts_data = get_liked_posts_by_user_id(db, current_user.id)
+        liked_posts = []
+        for post_tuple in liked_posts_data:
+            post, profile_name, username, avatar_url, thumbnail_key, duration_sec, created_at = post_tuple
+            liked_post = LikedPostResponse(
+                id=post.id,
+                description=post.description,
+                creator_user_id=post.creator_user_id,
+                profile_name=profile_name,
+                username=username,
+                avatar_url=f"{BASE_URL}/{avatar_url}" if avatar_url else None,
+                thumbnail_key=f"{BASE_URL}/{thumbnail_key}" if thumbnail_key else None,
+                duration_sec=duration_sec,
+                created_at=created_at,
+                updated_at=post.updated_at
+            )
+            liked_posts.append(liked_post)
         
-        posts_data = get_posts_count_by_user_id(db, current_user.id)
-        
-        total_sales = get_total_sales(db, current_user.id)
-        
-        plan_data = get_plan_counts(db, current_user.id)
-        
-        return AccountInfoResponse(
-            profile_name=current_user.profile_name or "",
-            username=profile.username if profile else "",
-            avatar_url=f"{BASE_URL}/{profile.avatar_url}" if profile and profile.avatar_url else None,
-            cover_url=f"{BASE_URL}/{profile.cover_url}" if profile and profile.cover_url else None,
+        follower_data = get_follower_count(db, current_user.id)
+        social_info = SocialInfo(
             followers_count=follower_data["followers_count"] if follower_data else 0,
             following_count=follower_data["following_count"] if follower_data else 0,
             total_likes=total_likes or 0,
+            liked_posts=liked_posts,
+        )
+
+        # 投稿数
+        posts_data = get_posts_count_by_user_id(db, current_user.id)
+        posts_info = PostsInfo(
             pending_posts_count=posts_data["peding_posts_count"] if posts_data else 0,
             rejected_posts_count=posts_data["rejected_posts_count"] if posts_data else 0,
             unpublished_posts_count=posts_data["unpublished_posts_count"] if posts_data else 0,
             deleted_posts_count=posts_data["deleted_posts_count"] if posts_data else 0,
             approved_posts_count=posts_data["approved_posts_count"] if posts_data else 0,
+        )
+        
+        # 売上
+        total_sales = get_total_sales(db, current_user.id)
+        sales_info = SalesInfo(
             total_sales=total_sales or 0,
+        )
+
+        # プラン情報
+        plan_data = get_plan_by_user_id(db, current_user.id)
+        # 単品購入データ
+        single_purchases_count = get_single_purchases_count_by_user_id(db, current_user.id)
+        single_purchases_data = get_single_purchases_by_user_id(db, current_user.id)
+        plan_info = PlanInfo(
             plan_count=plan_data["plan_count"] if plan_data else 0,
-            total_plan_price=plan_data["total_price"] if plan_data else 0
+            total_price=plan_data["total_price"] if plan_data else 0,
+            subscribed_plan_count=plan_data["subscribed_plan_count"] if plan_data else 0,
+            subscribed_total_price=plan_data["subscribed_total_price"] if plan_data else 0,
+            subscribed_plan_details=plan_data["subscribed_plan_details"] if plan_data else [],
+            single_purchases_count=single_purchases_count if single_purchases_count else 0,
+            single_purchases_data=single_purchases_data if single_purchases_data else [],
+        )
+
+        return AccountInfoResponse(
+            profile_info=profile_info,
+            social_info=social_info,
+            posts_info=posts_info,
+            sales_info=sales_info,
+            plan_info=plan_info,
         )
     except Exception as e:
         print("アカウント情報取得エラーが発生しました", e)
         # エラー時はデフォルト値で返す
         return AccountInfoResponse(
-            profile_name=current_user.profile_name or "",
-            username="",
-            avatar_url=None,
-            cover_url=None,
-            followers_count=0,
-            following_count=0,
-            total_likes=0,
-            pending_posts_count=0,
-            rejected_posts_count=0,
-            unpublished_posts_count=0,
-            deleted_posts_count=0,
-            approved_posts_count=0,
-            total_sales=0,
-            plan_count=0,
-            total_plan_price=0
+            profile_info=ProfileInfo(
+                profile_name=current_user.profile_name or "",
+                username="",
+                avatar_url=None,
+                cover_url=None,
+            ),
+            social_info=SocialInfo(
+                followers_count=0,
+                following_count=0,
+                total_likes=0,
+                liked_posts=[],
+            ),
+            posts_info=PostsInfo(
+                pending_posts_count=0,
+                rejected_posts_count=0,
+                unpublished_posts_count=0,
+                deleted_posts_count=0,
+                approved_posts_count=0,
+            ),
+            sales_info=SalesInfo(
+                total_sales=0,
+            ),
+            plan_info=PlanInfo(
+                plan_count=0,
+                total_price=0,
+                subscribed_plan_count=0,
+                subscribed_total_price=0,
+                subscribed_plan_names=[],
+                subscribed_plan_details=[],
+                single_purchases_count=0,
+                single_purchases_data=[],
+            ),
         )
 
 @router.put("/update", response_model=AccountUpdateResponse)
@@ -209,3 +302,147 @@ def get_post_status(
     except Exception as e:
         print("投稿ステータス取得エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/plans")
+def get_plans(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    プラン一覧を取得
+    """
+    try:
+        plan_data = get_plan_by_user_id(db, current_user.id)
+
+        return PlansSubscribedInfo(
+            plan_count=plan_data["plan_count"] if plan_data else 0,
+            total_price=plan_data["total_price"] if plan_data else 0,
+            subscribed_plan_count=plan_data["subscribed_plan_count"] if plan_data else 0,
+            subscribed_total_price=plan_data["subscribed_total_price"] if plan_data else 0,
+            subscribed_plan_names=plan_data["subscribed_plan_names"] if plan_data else [],
+            subscribed_plan_details=plan_data["subscribed_plan_details"] if plan_data else [],
+        )
+    except Exception as e:
+        print("プラン一覧取得エラーが発生しました", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/bookmarks", response_model=BookmarkedPostsResponse)
+def get_bookmarks(
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    ブックマークした投稿一覧を取得
+    """
+    try:
+        bookmarks_data = get_bookmarked_posts_by_user_id(db, current_user.id)
+
+        bookmarks = []
+        for post, profile_name, username, avatar_url, thumbnail_key, duration_sec, likes_count, comments_count, bookmarked_at in bookmarks_data:
+            # 動画時間をフォーマット
+            duration = None
+            if duration_sec:
+                minutes = int(duration_sec // 60)
+                seconds = int(duration_sec % 60)
+                duration = f"{minutes}:{seconds:02d}"
+
+            bookmark = PostCardResponse(
+                id=post.id,
+                thumbnail_url=f"{BASE_URL}/{thumbnail_key}" if thumbnail_key else None,
+                title=post.description or "",
+                creator_avatar=f"{BASE_URL}/{avatar_url}" if avatar_url else None,
+                creator_name=profile_name,
+                creator_username=username,
+                likes_count=likes_count or 0,
+                comments_count=comments_count or 0,
+                duration=duration,
+                is_video=(post.post_type == 2),  # 2が動画
+                created_at=bookmarked_at
+            )
+            bookmarks.append(bookmark)
+
+        return BookmarkedPostsResponse(bookmarks=bookmarks)
+    except Exception as e:
+        print("ブックマーク一覧取得エラー:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/likes", response_model=LikedPostsListResponse)
+def get_likes(
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    いいねした投稿一覧を取得
+    """
+    try:
+        liked_posts_data = get_liked_posts_list_by_user_id(db, current_user.id)
+
+        liked_posts = []
+        for post, profile_name, username, avatar_url, thumbnail_key, duration_sec, likes_count, comments_count, liked_at in liked_posts_data:
+            # 動画時間をフォーマット
+            duration = None
+            if duration_sec:
+                minutes = int(duration_sec // 60)
+                seconds = int(duration_sec % 60)
+                duration = f"{minutes}:{seconds:02d}"
+
+            liked_post = PostCardResponse(
+                id=post.id,
+                thumbnail_url=f"{BASE_URL}/{thumbnail_key}" if thumbnail_key else None,
+                title=post.description or "",
+                creator_avatar=f"{BASE_URL}/{avatar_url}" if avatar_url else None,
+                creator_name=profile_name,
+                creator_username=username,
+                likes_count=likes_count or 0,
+                comments_count=comments_count or 0,
+                duration=duration,
+                is_video=(post.post_type == 2),  # 2が動画
+                created_at=liked_at
+            )
+            liked_posts.append(liked_post)
+
+        return LikedPostsListResponse(liked_posts=liked_posts)
+    except Exception as e:
+        print("いいね一覧取得エラー:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/bought", response_model=BoughtPostsResponse)
+def get_bought(
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    購入済み投稿一覧を取得
+    """
+    try:
+        bought_posts_data = get_bought_posts_by_user_id(db, current_user.id)
+
+        bought_posts = []
+        for post, profile_name, username, avatar_url, thumbnail_key, duration_sec, likes_count, comments_count, purchased_at in bought_posts_data:
+            # 動画時間をフォーマット
+            duration = None
+            if duration_sec:
+                minutes = int(duration_sec // 60)
+                seconds = int(duration_sec % 60)
+                duration = f"{minutes}:{seconds:02d}"
+
+            bought_post = PostCardResponse(
+                id=post.id,
+                thumbnail_url=f"{BASE_URL}/{thumbnail_key}" if thumbnail_key else None,
+                title=post.description or "",
+                creator_avatar=f"{BASE_URL}/{avatar_url}" if avatar_url else None,
+                creator_name=profile_name,
+                creator_username=username,
+                likes_count=likes_count or 0,
+                comments_count=comments_count or 0,
+                duration=duration,
+                is_video=(post.post_type == 2),  # 2が動画
+                created_at=purchased_at
+            )
+            bought_posts.append(bought_post)
+
+        return BoughtPostsResponse(bought_posts=bought_posts)
+    except Exception as e:
+        print("購入済み一覧取得エラー:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+    

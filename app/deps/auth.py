@@ -6,7 +6,7 @@ from app.core.security import decode_token
 from app.core.cookies import ACCESS_COOKIE
 from app.models.user import Users
 from app.crud.user_crud import get_user_by_id
-
+import time, os, jwt
 
 def get_current_user(
     db: Session = Depends(get_db),
@@ -26,7 +26,6 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-
 def get_current_user_optional(
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None, alias=ACCESS_COOKIE),
@@ -43,7 +42,6 @@ def get_current_user_optional(
         return user
     except Exception:
         return None
-
 
 def get_current_admin_user(
     db: Session = Depends(get_db),
@@ -93,3 +91,14 @@ def get_current_admin_user(
         )
     
     return user
+
+def issue_app_jwt_for(x_user_id: str, handle: str|None, name: str|None):
+    payload = {
+        "sub": x_user_id,
+        "handle": handle,
+        "name": name,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 60*60*24*7,  # 7日
+        "provider": "x"
+    }
+    return jwt.encode(payload, os.getenv("SECRET_KEY"), algorithm="HS256")

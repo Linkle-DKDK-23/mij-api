@@ -20,6 +20,9 @@ if TYPE_CHECKING:
     from .gender import Gender
     from .post_moderation_events import PostModerationEvents
     from .purchases import Purchases
+    from .email_verification_tokens import EmailVerificationTokens
+    from .conversation_messages import ConversationMessages
+    from .conversation_participants import ConversationParticipants
 
 class Users(Base):
     __tablename__ = "users"
@@ -27,6 +30,7 @@ class Users(Base):
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     profile_name: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
     email: Mapped[Optional[str]] = mapped_column(CITEXT, unique=True, nullable=True)
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, nullable=True, default=False)
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     password_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     role: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
@@ -46,3 +50,6 @@ class Users(Base):
     genders: Mapped[List["Gender"]] = relationship("Gender", secondary="creator_type", viewonly=True, lazy="selectin")
     moderation_events: Mapped[List["PostModerationEvents"]] = relationship("PostModerationEvents", back_populates="acted_by")
     pure_purchases: Mapped[List["Purchases"]] = relationship("Purchases", back_populates="user")
+    email_verification_tokens: Mapped[List["EmailVerificationTokens"]] = relationship("EmailVerificationTokens", back_populates="user")
+    conversations: Mapped[List["ConversationMessages"]] = relationship("ConversationMessages", back_populates="sender")
+    participants: Mapped[List["ConversationParticipants"]] = relationship("ConversationParticipants", back_populates="user")

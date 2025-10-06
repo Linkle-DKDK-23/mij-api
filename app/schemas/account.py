@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Dict
+from uuid import UUID
+from datetime import datetime
+from decimal import Decimal
 from app.schemas.commons import PresignResponseItem
+from app.schemas.purchases import SinglePurchaseResponse
 from app.models.posts import Posts
 
 Kind = Literal["avatar", "cover"]
@@ -10,22 +14,66 @@ class AccountFileSpec(BaseModel):
     content_type: Literal["image/jpeg","image/png","image/webp"]
     ext: Literal["jpg","jpeg","png","webp"]
 
-class AccountInfoResponse(BaseModel):
+class LikedPostResponse(BaseModel):
+    id: UUID
+    description: str
+    creator_user_id: UUID
+    profile_name: str
+    username: str
+    avatar_url: Optional[str] = None
+    thumbnail_key: Optional[str] = None
+    duration_sec: Optional[Decimal] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ProfileInfo(BaseModel):
     profile_name: str
     username: str
     avatar_url: Optional[str] = None
     cover_url: Optional[str] = None
+
+class SocialInfo(BaseModel):
     followers_count: int
     following_count: int
     total_likes: int
+    liked_posts: List[LikedPostResponse] = []
+
+class PostsInfo(BaseModel):
     pending_posts_count: int
     rejected_posts_count: int
     unpublished_posts_count: int
     deleted_posts_count: int
     approved_posts_count: int
+
+class SalesInfo(BaseModel):
     total_sales: int
+
+class PlanInfo(BaseModel):
     plan_count: int
-    total_plan_price: int
+    total_price: int
+    subscribed_plan_count: int
+    subscribed_total_price: int
+    subscribed_plan_details: List[dict] = []
+    single_purchases_count: int
+    single_purchases_data: List[SinglePurchaseResponse] = []
+
+class PlansSubscribedInfo(BaseModel):
+    plan_count: int
+    total_price: int
+    subscribed_plan_count: int
+    subscribed_total_price: int
+    subscribed_plan_names: List[str] = []
+    subscribed_plan_details: List[dict] = []
+
+class AccountInfoResponse(BaseModel):
+    profile_info: ProfileInfo
+    social_info: SocialInfo
+    posts_info: PostsInfo
+    sales_info: SalesInfo
+    plan_info: PlanInfo
 
 class AvatarPresignRequest(BaseModel):
     files: List[AccountFileSpec] = Field(..., description='例: [{"kind":"avatar","ext":"jpg"}, ...]')
@@ -44,6 +92,31 @@ class AccountUpdateRequest(BaseModel):
 class AccountUpdateResponse(BaseModel):
     message: str
     success: bool
+
+class PostCardResponse(BaseModel):
+    id: UUID
+    thumbnail_url: Optional[str] = None
+    title: str
+    creator_avatar: Optional[str] = None
+    creator_name: str
+    creator_username: str
+    likes_count: int
+    comments_count: int
+    duration: Optional[str] = None
+    is_video: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BookmarkedPostsResponse(BaseModel):
+    bookmarks: List[PostCardResponse]
+
+class LikedPostsListResponse(BaseModel):
+    liked_posts: List[PostCardResponse]
+
+class BoughtPostsResponse(BaseModel):
+    bought_posts: List[PostCardResponse]
 
 class AccountPostResponse(BaseModel):
     id: str

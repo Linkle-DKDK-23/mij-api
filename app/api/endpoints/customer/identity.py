@@ -121,7 +121,7 @@ def kyc_complete(
                 raise HTTPException(400, f"missing uploaded file: {f.kind}")
 
         update_identity_verification(
-            db, body.verification_id, IdentityStatus.APPROVED, datetime.now(timezone.utc)
+            db, body.verification_id, IdentityStatus.APPROVED, datetime.utcnow()
         )
         return {"ok": True, "verification_id": str(body.verification_id)}
     except Exception as e:

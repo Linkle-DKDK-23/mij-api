@@ -119,3 +119,10 @@ class MediaRenditionKind:
     HLS_VARIANT_720P  = 13 # HLS_VARIANT_720P
     HLS_VARIANT_1080P = 14 # HLS_VARIANT_1080P
     FFMPEG = 20 # FFMPEG
+
+# 会話の種類
+class ConversationType:
+    SUPPORT = 1 # サポート会話
+    DM = 2 # DM
+    GROUP = 3 # グループ
+    DELUSION = 4 # 妄想の間

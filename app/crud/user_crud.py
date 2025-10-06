@@ -1,9 +1,12 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.user import Users
+from app.models.profiles import Profiles
 from app.schemas.user import UserCreate
 from app.core.security import hash_password
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, update
+from sqlalchemy.orm import joinedload
+from datetime import datetime, timezone
 from app.constants.enums import (
     AccountType, 
     AccountStatus
@@ -17,26 +20,6 @@ from app.models.social import Likes, Follows
 from app.models.prices import Prices
 from app.constants.enums import PostStatus, MediaAssetKind, PlanStatus
 
-
-def create_user(db: Session, user_create: UserCreate) -> Users:
-    """
-    ユーザーを作成する
-
-    Args:
-        db: データベースセッション
-        user_create: ユーザー作成情報
-    """
-    # ランダム文字列5文字作成
-    db_user = Users(
-        profile_name=user_create.name,
-        email=user_create.email,
-        password_hash=hash_password(user_create.password),
-        role=AccountType.GENERAL_USER,
-        status=AccountStatus.ACTIVE
-    )
-    db.add(db_user)
-    db.flush()
-    return db_user
 
 def check_email_exists(db: Session, email: str) -> bool:
     """
@@ -77,37 +60,16 @@ def get_user_by_email(db: Session, email: str) -> Users:
     Returns:
         Users: ユーザー情報
     """
-    return db.scalar(select(Users).where(Users.email == email))
-
-def get_user_by_id(db: Session, user_id: str) -> Users:
-    """
-    ユーザーIDによるユーザー取得
-
-    Args:
-        db (Session): データベースセッション
-        user_id (str): ユーザーID
-
-    Returns:
-        Users: ユーザー情報
-    """
-    return db.get(Users, user_id)
-
-def update_user(db: Session, user_id: str, profile_name: str) -> Users:
-    """
-    ユーザーを更新
-    """
-    user = get_user_by_id(db, user_id)
-    user.profile_name = profile_name
-    db.add(user)
-    db.flush()
-    return user
+    return (
+        db.scalar(
+            select(Users)
+            .where(Users.email == email, Users.is_email_verified == True))
+        )
 
 def get_user_profile_by_username(db: Session, username: str) -> dict:
     """
     ユーザー名によるユーザープロフィール取得（関連データ含む）
     """
-
-
     profile = get_profile_by_username(db, username)
 
     if not profile:
@@ -165,3 +127,75 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
         "individual_purchases": individual_purchases,
         "gacha_items": gacha_items
     }
+
+def get_user_by_id(db: Session, user_id: str) -> Users:
+    """
+    ユーザーIDによるユーザー取得（Profileテーブルと結合）
+
+    Args:
+        db (Session): データベースセッション
+        user_id (str): ユーザーID
+
+    Returns:
+        Users: ユーザー情報（Profile情報も含む）
+    """
+    return (
+        db.query(Users)
+        .options(joinedload(Users.profile))
+        .filter(Users.id == user_id)
+        .first()
+    )
+
+def resend_email_verification(db: Session, email: str) -> Users:
+    """
+    メールアドレスによるユーザー取得
+    """
+    stmt = select(Users).where(Users.email == email)
+    user = (db.execute(stmt)).scalar_one_or_none()
+    return user
+
+def update_user(db: Session, user_id: str, profile_name: str) -> Users:
+    """
+    ユーザーを更新
+    """
+    user = get_user_by_id(db, user_id)
+    user.profile_name = profile_name
+    db.add(user)
+    db.flush()
+    return user
+
+def update_user_email_verified_at(db: Session, user_id: str) -> Users:
+    """
+    ユーザーのメールアドレスを検証済みに更新
+    """
+    db.execute(update(Users).where(Users.id==user_id).values(
+        is_email_verified=True, email_verified_at=datetime.utcnow()
+    ))
+
+def create_user_by_x(db: Session, user: Users) -> Users:
+    """
+    Xユーザーを作成
+    """
+    db.add(user)
+    db.flush()
+    return user
+
+def create_user(db: Session, user_create: UserCreate) -> Users:
+    """
+    ユーザーを作成する
+
+    Args:
+        db: データベースセッション
+        user_create: ユーザー作成情報
+    """
+    # ランダム文字列5文字作成
+    db_user = Users(
+        profile_name=user_create.name,
+        email=user_create.email,
+        password_hash=hash_password(user_create.password),
+        role=AccountType.GENERAL_USER,
+        status=AccountStatus.ACTIVE
+    )
+    db.add(db_user)
+    db.flush()
+    return db_user
