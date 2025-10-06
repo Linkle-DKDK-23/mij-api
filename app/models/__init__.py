@@ -29,6 +29,9 @@ from .post_moderation_events import PostModerationEvents
 from .media_rendition_jobs import MediaRenditionJobs
 from .preregistrations import Preregistrations
 from .email_verification_tokens import EmailVerificationTokens
+from .conversations import Conversations
+from .conversation_messages import ConversationMessages
+from .conversation_participants import ConversationParticipants
 
 __all__ = [
     "Users", "Profiles", "Creators", "Genres", "Categories", "Posts", "PostCategories",
@@ -38,5 +41,5 @@ __all__ = [
     "Reports", "AuditLogs", "PayoutAccounts", "Payouts", "PayoutItems",
     "CreatorBalances", "Tags", "PostTags", "I18nLanguages", "I18nTexts",
     "CreatorType", "Gender", "Purchases", "PostModerationEvents", "MediaRenditionJobs", "Preregistrations",
-    "EmailVerificationTokens"
+    "EmailVerificationTokens", "Conversations", "ConversationMessages", "ConversationParticipants"
 ]

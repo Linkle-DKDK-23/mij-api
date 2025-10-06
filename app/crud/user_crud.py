@@ -1,9 +1,11 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.user import Users
+from app.models.profiles import Profiles
 from app.schemas.user import UserCreate
 from app.core.security import hash_password
 from sqlalchemy import select, desc, func, update
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone
 from app.constants.enums import (
     AccountType, 
@@ -128,16 +130,21 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
 
 def get_user_by_id(db: Session, user_id: str) -> Users:
     """
-    ユーザーIDによるユーザー取得
+    ユーザーIDによるユーザー取得（Profileテーブルと結合）
 
     Args:
         db (Session): データベースセッション
         user_id (str): ユーザーID
 
     Returns:
-        Users: ユーザー情報
+        Users: ユーザー情報（Profile情報も含む）
     """
-    return db.get(Users, user_id)
+    return (
+        db.query(Users)
+        .options(joinedload(Users.profile))
+        .filter(Users.id == user_id)
+        .first()
+    )
 
 def resend_email_verification(db: Session, email: str) -> Users:
     """

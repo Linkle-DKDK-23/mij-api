@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from .post_moderation_events import PostModerationEvents
     from .purchases import Purchases
     from .email_verification_tokens import EmailVerificationTokens
+    from .conversation_messages import ConversationMessages
+    from .conversation_participants import ConversationParticipants
 
 class Users(Base):
     __tablename__ = "users"
@@ -49,3 +51,5 @@ class Users(Base):
     moderation_events: Mapped[List["PostModerationEvents"]] = relationship("PostModerationEvents", back_populates="acted_by")
     pure_purchases: Mapped[List["Purchases"]] = relationship("Purchases", back_populates="user")
     email_verification_tokens: Mapped[List["EmailVerificationTokens"]] = relationship("EmailVerificationTokens", back_populates="user")
+    conversations: Mapped[List["ConversationMessages"]] = relationship("ConversationMessages", back_populates="sender")
+    participants: Mapped[List["ConversationParticipants"]] = relationship("ConversationParticipants", back_populates="user")
