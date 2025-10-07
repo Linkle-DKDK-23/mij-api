@@ -24,6 +24,10 @@ from datetime import datetime, timedelta
 # エイリアスを定義
 ThumbnailAssets = aliased(MediaAssets)
 
+# ========== 投稿管理 ==========
+
+
+# ========== 取得系 ==========
 def get_total_likes_by_user_id(db: Session, user_id: UUID) -> int:
     """
     ユーザーの投稿についた総合いいね数を取得
@@ -533,6 +537,7 @@ def get_ranking_posts_daily(db: Session, limit: int = 50):
         .all()
     )
 
+# ========== 作成・更新・削除系 ==========
 def create_post(db: Session, post_data: dict):
     """
     投稿を作成
@@ -581,6 +586,8 @@ def update_post_status(db: Session, post_id: UUID, status: int):
     db.add(post)
     db.flush()
     return post
+
+# ========== 内部関数 ==========
 
 def _is_purchased(db: Session, user_id: UUID | None, post_id: UUID) -> bool:
     """

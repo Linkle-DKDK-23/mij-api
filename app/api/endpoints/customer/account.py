@@ -126,12 +126,22 @@ def get_account_info(
         # 単品購入データ
         single_purchases_count = get_single_purchases_count_by_user_id(db, current_user.id)
         single_purchases_data = get_single_purchases_by_user_id(db, current_user.id)
+
+        # subscribed_plan_detailsのURLを構築
+        subscribed_plan_details = []
+        for plan in plan_data.get("subscribed_plan_details", []):
+            subscribed_plan_details.append({
+                **plan,
+                "creator_avatar_url": f"{BASE_URL}/{plan['creator_avatar_url']}" if plan.get('creator_avatar_url') else None,
+                "thumbnail_keys": [f"{BASE_URL}/{key}" for key in plan.get('thumbnail_keys', [])]
+            })
+
         plan_info = PlanInfo(
             plan_count=plan_data["plan_count"] if plan_data else 0,
             total_price=plan_data["total_price"] if plan_data else 0,
             subscribed_plan_count=plan_data["subscribed_plan_count"] if plan_data else 0,
             subscribed_total_price=plan_data["subscribed_total_price"] if plan_data else 0,
-            subscribed_plan_details=plan_data["subscribed_plan_details"] if plan_data else [],
+            subscribed_plan_details=subscribed_plan_details,
             single_purchases_count=single_purchases_count if single_purchases_count else 0,
             single_purchases_data=single_purchases_data if single_purchases_data else [],
         )
@@ -314,13 +324,22 @@ def get_plans(
     try:
         plan_data = get_plan_by_user_id(db, current_user.id)
 
+        # subscribed_plan_detailsのURLを構築
+        subscribed_plan_details = []
+        for plan in plan_data.get("subscribed_plan_details", []):
+            subscribed_plan_details.append({
+                **plan,
+                "creator_avatar_url": f"{BASE_URL}/{plan['creator_avatar_url']}" if plan.get('creator_avatar_url') else None,
+                "thumbnail_keys": [f"{BASE_URL}/{key}" for key in plan.get('thumbnail_keys', [])]
+            })
+
         return PlansSubscribedInfo(
             plan_count=plan_data["plan_count"] if plan_data else 0,
             total_price=plan_data["total_price"] if plan_data else 0,
             subscribed_plan_count=plan_data["subscribed_plan_count"] if plan_data else 0,
             subscribed_total_price=plan_data["subscribed_total_price"] if plan_data else 0,
             subscribed_plan_names=plan_data["subscribed_plan_names"] if plan_data else [],
-            subscribed_plan_details=plan_data["subscribed_plan_details"] if plan_data else [],
+            subscribed_plan_details=subscribed_plan_details,
         )
     except Exception as e:
         print("プラン一覧取得エラーが発生しました", e)
