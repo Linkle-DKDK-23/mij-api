@@ -7,6 +7,7 @@ from app.core.security import hash_password
 from sqlalchemy import select, desc, func, update
 from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone
+from uuid import UUID
 from app.constants.enums import (
     AccountType, 
     AccountStatus
@@ -19,7 +20,6 @@ from app.models.media_assets import MediaAssets
 from app.models.social import Likes, Follows
 from app.models.prices import Prices
 from app.constants.enums import PostStatus, MediaAssetKind, PlanStatus
-
 
 def check_email_exists(db: Session, email: str) -> bool:
     """
@@ -79,7 +79,7 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
     
     posts = (
         db.query(
-            Posts, 
+            Posts,
             func.count(Likes.post_id).label('likes_count'),
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -94,7 +94,21 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
         .all()
     )
     
-    plans = db.query(Plans).filter(Plans.creator_user_id == user.id).filter(Plans.type == PlanStatus.PLAN).filter(Plans.deleted_at.is_(None)).all()
+    plans = (
+        db.query(
+            Plans.id.label('id'),
+            Plans.name.label('name'),
+            Plans.description.label('description'),
+            Prices.price.label('price'),
+            Prices.currency.label('currency')
+        )
+        .join(Prices, Plans.id == Prices.plan_id)
+        .filter(Plans.creator_user_id == user.id)
+        .filter(Plans.type == PlanStatus.PLAN)
+        .filter(Plans.deleted_at.is_(None))
+        .group_by(Plans.id, Prices.price, Prices.currency)
+        .all()
+    )
     
     individual_purchases = (
         db.query(
@@ -119,13 +133,19 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
     
     gacha_items = db.query(OrderItems).join(Orders).filter(Orders.user_id == user.id).filter(OrderItems.item_type == 2).all()
     
+    # フォロワー数とフォロー数を取得
+    follower_count = get_follower_count(db, user.id)
+    following_count = get_following_count(db, user.id)
+    
     return {
         "user": user,
         "profile": profile,
         "posts": posts,
         "plans": plans,
         "individual_purchases": individual_purchases,
-        "gacha_items": gacha_items
+        "gacha_items": gacha_items,
+        "follower_count": follower_count,
+        "following_count": following_count
     }
 
 def get_user_by_id(db: Session, user_id: str) -> Users:
@@ -144,6 +164,40 @@ def get_user_by_id(db: Session, user_id: str) -> Users:
         .options(joinedload(Users.profile))
         .filter(Users.id == user_id)
         .first()
+    )
+
+def get_follower_count(db: Session, user_id: UUID) -> int:
+    """
+    ユーザーのフォロワー数を取得
+
+    Args:
+        db (Session): データベースセッション
+        user_id (UUID): ユーザーID
+
+    Returns:
+        int: フォロワー数
+    """
+    return (
+        db.query(Follows)
+        .filter(Follows.creator_user_id == user_id)
+        .count()
+    )
+
+def get_following_count(db: Session, user_id: UUID) -> int:
+    """
+    ユーザーのフォロー数を取得
+
+    Args:
+        db (Session): データベースセッション
+        user_id (UUID): ユーザーID
+
+    Returns:
+        int: フォロー数
+    """
+    return (
+        db.query(Follows)
+        .filter(Follows.follower_user_id == user_id)
+        .count()
     )
 
 def resend_email_verification(db: Session, email: str) -> Users:

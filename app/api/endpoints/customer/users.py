@@ -119,7 +119,9 @@ def get_user_profile_by_username_endpoint(
             profile_plans.append(ProfilePlanResponse(
                 id=plan.id,
                 name=plan.name,
-                description=plan.description
+                description=plan.description,
+                price=plan.price,
+                currency=plan.currency
             ))
         
         profile_purchases = []
@@ -158,7 +160,7 @@ def get_user_profile_by_username_endpoint(
             bio=profile.bio if profile else None,
             website_url=website_url,
             post_count=len(profile_data["posts"]),
-            follower_count=0,
+            follower_count=profile_data["follower_count"],
             posts=profile_posts,
             plans=profile_plans,
             individual_purchases=profile_purchases,

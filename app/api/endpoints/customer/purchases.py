@@ -38,9 +38,12 @@ async def create_purchase_endpoint(
     try:
         purchase_data = {
             "user_id": user.id,
-            "post_id": purchase_create.post_id,
             "plan_id": purchase_create.plan_id,
         }
+        # post_idが指定されている場合のみ追加
+        if purchase_create.post_id:
+            purchase_data["post_id"] = purchase_create.post_id
+
         purchase = create_purchase(db, purchase_data)
         db.commit()
         db.refresh(purchase)

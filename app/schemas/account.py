@@ -51,12 +51,25 @@ class PostsInfo(BaseModel):
 class SalesInfo(BaseModel):
     total_sales: int
 
+class SubscribedPlanDetail(BaseModel):
+    purchase_id: str
+    plan_id: str
+    plan_name: str
+    plan_description: Optional[str] = None
+    price: int
+    purchase_created_at: datetime
+    creator_avatar_url: Optional[str] = None
+    creator_username: Optional[str] = None
+    creator_profile_name: Optional[str] = None
+    post_count: int
+    thumbnail_keys: List[str] = []
+
 class PlanInfo(BaseModel):
     plan_count: int
     total_price: int
     subscribed_plan_count: int
     subscribed_total_price: int
-    subscribed_plan_details: List[dict] = []
+    subscribed_plan_details: List[SubscribedPlanDetail] = []
     single_purchases_count: int
     single_purchases_data: List[SinglePurchaseResponse] = []
 
@@ -66,7 +79,7 @@ class PlansSubscribedInfo(BaseModel):
     subscribed_plan_count: int
     subscribed_total_price: int
     subscribed_plan_names: List[str] = []
-    subscribed_plan_details: List[dict] = []
+    subscribed_plan_details: List[SubscribedPlanDetail] = []
 
 class AccountInfoResponse(BaseModel):
     profile_info: ProfileInfo
