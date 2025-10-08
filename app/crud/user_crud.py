@@ -79,7 +79,7 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
     
     posts = (
         db.query(
-            Posts, 
+            Posts,
             func.count(Likes.post_id).label('likes_count'),
             MediaAssets.storage_key.label('thumbnail_key')
         )
@@ -94,7 +94,21 @@ def get_user_profile_by_username(db: Session, username: str) -> dict:
         .all()
     )
     
-    plans = db.query(Plans).filter(Plans.creator_user_id == user.id).filter(Plans.type == PlanStatus.PLAN).filter(Plans.deleted_at.is_(None)).all()
+    plans = (
+        db.query(
+            Plans.id.label('id'),
+            Plans.name.label('name'),
+            Plans.description.label('description'),
+            Prices.price.label('price'),
+            Prices.currency.label('currency')
+        )
+        .join(Prices, Plans.id == Prices.plan_id)
+        .filter(Plans.creator_user_id == user.id)
+        .filter(Plans.type == PlanStatus.PLAN)
+        .filter(Plans.deleted_at.is_(None))
+        .group_by(Plans.id, Prices.price, Prices.currency)
+        .all()
+    )
     
     individual_purchases = (
         db.query(

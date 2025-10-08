@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime
 
 class PurchaseCreateRequest(BaseModel):
-    post_id: UUID
+    post_id: Optional[UUID] = None
     plan_id: UUID
 
 class SinglePurchaseResponse(BaseModel):

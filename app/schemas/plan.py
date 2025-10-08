@@ -38,3 +38,22 @@ class PlanListResponse(BaseModel):
 
 class SubscribedPlanListResponse(BaseModel):
     subscribed_plans: List[SubscribedPlanResponse]
+
+class PlanPostResponse(BaseModel):
+    id: UUID
+    thumbnail_url: Optional[str] = None
+    title: str
+    creator_avatar: Optional[str] = None
+    creator_name: str
+    creator_username: str
+    likes_count: int
+    comments_count: int
+    duration: Optional[str] = None
+    is_video: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PlanPostsResponse(BaseModel):
+    posts: List[PlanPostResponse]

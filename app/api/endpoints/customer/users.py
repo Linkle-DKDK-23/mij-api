@@ -119,7 +119,9 @@ def get_user_profile_by_username_endpoint(
             profile_plans.append(ProfilePlanResponse(
                 id=plan.id,
                 name=plan.name,
-                description=plan.description
+                description=plan.description,
+                price=plan.price,
+                currency=plan.currency
             ))
         
         profile_purchases = []
