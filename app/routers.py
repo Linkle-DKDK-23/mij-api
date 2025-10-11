@@ -15,6 +15,10 @@ from app.api.endpoints.admin import (
     admin, admin_auth, conversations as admin_conversations
 )
 
+# Debug routes
+from app.api.endpoints.debug import debug_email
+
+
 # Hook routes
 from app.api.hook.webhooks_media_convert import router as webhooks_media_convert
 from app.api.hook.websocket_conversations import router as websocket_conversations
@@ -52,3 +56,6 @@ api_router.include_router(conversations.router, prefix="/conversations", tags=["
 api_router.include_router(admin_auth.router, prefix="/admin/auth", tags=["Admin Auth"])
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 api_router.include_router(admin_conversations.router, prefix="/admin", tags=["Admin Conversations"])
+
+# Debug routes
+api_router.include_router(debug_email.router, prefix="/_debug", tags=["Debug"])
