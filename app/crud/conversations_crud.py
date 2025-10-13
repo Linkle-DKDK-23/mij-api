@@ -10,6 +10,7 @@ from app.models.conversation_participants import ConversationParticipants
 from app.models.user import Users
 from app.constants.enums import ConversationType
 from app.models.profiles import Profiles
+from app.constants.enums import WelcomeMessage
 
 
 # ========== 会話管理 ==========
@@ -18,6 +19,7 @@ def get_or_create_delusion_conversation(db: Session, user_id: UUID) -> Conversat
     """
     妄想メッセージ用の会話を取得または作成する
     - 1ユーザーにつき1つの管理人トークルーム
+    - 新規作成時は自動的にウェルカムメッセージを挿入
     """
     # 既存の妄想メッセージ会話を検索
     participant = (
@@ -50,6 +52,23 @@ def get_or_create_delusion_conversation(db: Session, user_id: UUID) -> Conversat
         role=1  # 通常ユーザー
     )
     db.add(participant)
+    db.flush()
+
+    # ウェルカムメッセージを自動挿入（システムメッセージ）
+    welcome_message = ConversationMessages(
+        conversation_id=conversation.id,
+        sender_user_id=None,  # システムメッセージはsender_user_idをNULLに
+        type=0,  # システムメッセージタイプ
+        body_text=WelcomeMessage.MESSAGE,
+        moderation=1  # 自動承認
+    )
+    db.add(welcome_message)
+    db.flush()
+
+    # 会話の最終メッセージ情報を更新
+    conversation.last_message_id = welcome_message.id
+    conversation.last_message_at = welcome_message.created_at
+
     db.commit()
     db.refresh(conversation)
 
@@ -125,15 +144,16 @@ def get_messages_by_conversation(
     """
     会話のメッセージ一覧を取得（送信者情報含む）
     古い順にソート
+    システムメッセージ（sender_user_idがNULL）も含む
     """
     messages = (
         db.query(
-            ConversationMessages, 
-            Users, 
+            ConversationMessages,
+            Users,
             Profiles
         )
         .join(Users, ConversationMessages.sender_user_id == Users.id, isouter=True)
-        .join(Profiles, Users.id == Profiles.user_id)
+        .join(Profiles, Users.id == Profiles.user_id, isouter=True)  # 外部結合に変更
         .filter(ConversationMessages.conversation_id == conversation_id, ConversationMessages.deleted_at.is_(None))
         .order_by(ConversationMessages.created_at.asc())
         .offset(skip).limit(limit).all())
@@ -149,6 +169,17 @@ def get_message_by_id(db: Session, message_id: UUID) -> Optional[ConversationMes
         )
         .filter(ConversationMessages.id == message_id, ConversationMessages.deleted_at.is_(None))
         .first())
+
+
+def delete_message(db: Session, message_id: UUID) -> bool:
+    """メッセージを論理削除"""
+    message = get_message_by_id(db, message_id)
+    if not message:
+        return False
+
+    message.deleted_at = datetime.now()
+    db.commit()
+    return True
 
 
 # ========== 既読管理 ==========

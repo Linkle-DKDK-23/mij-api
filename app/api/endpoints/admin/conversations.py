@@ -43,7 +43,7 @@ def get_all_delusion_conversations(
 def get_conversation_messages_admin(
     conversation_id: UUID,
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=1000),
     current_user: Users = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
@@ -62,7 +62,7 @@ def get_conversation_messages_admin(
     )
 
     response = []
-    for message, sender in messages:
+    for message, sender, profile in messages:
         response.append(MessageResponse(
             id=message.id,
             conversation_id=message.conversation_id,
@@ -72,7 +72,7 @@ def get_conversation_messages_admin(
             created_at=message.created_at,
             updated_at=message.updated_at,
             sender_username=sender.profile_name if sender else None,
-            sender_avatar=sender.avatar_url if sender else None,
+            sender_avatar=profile.avatar_url if profile else None,
             sender_profile_name=sender.profile_name if sender else None
         ))
 
@@ -142,3 +142,34 @@ def mark_conversation_as_read(
     )
 
     return {"status": "success", "message": "Marked as read"}
+
+
+@router.delete("/conversations/delusion/{conversation_id}/messages/{message_id}")
+def delete_message(
+    conversation_id: UUID,
+    message_id: UUID,
+    current_user: Users = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    管理人用: メッセージを削除
+    """
+    conversation = conversations_crud.get_conversation_by_id(db, conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if conversation.type != ConversationType.DELUSION:
+        raise HTTPException(status_code=403, detail="Not a delusion conversation")
+
+    message = conversations_crud.get_message_by_id(db, message_id)
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    if message.conversation_id != conversation_id:
+        raise HTTPException(status_code=400, detail="Message does not belong to this conversation")
+
+    success = conversations_crud.delete_message(db, message_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete message")
+
+    return {"status": "success", "message": "Message deleted"}
