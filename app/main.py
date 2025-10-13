@@ -26,11 +26,16 @@ origins = [
     "http://localhost:3001",
     "http://localhost:3003",
 
+    # 事前登録サイト
+    "https://campaign.mijfans.jp",
+
     # ステージング
     "https://stg.mijfans.jp",
     "https://stg-admin.mijfans.jp",
 
     # 本番環境用
+    "https://mijfans.jp",
+    "https://admin.mijfans.jp",
     "https://prd-admin.linkle.group"
 ]
 
