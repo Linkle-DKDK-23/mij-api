@@ -35,6 +35,7 @@ origins = [
 
     # 本番環境用
     "https://mijfans.jp",
+    "https://admin.mijfans.jp",
     "https://prd-admin.linkle.group"
 ]
 

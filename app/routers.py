@@ -12,7 +12,8 @@ from app.api.endpoints.customer import (
 
 # Admin routes
 from app.api.endpoints.admin import (
-    admin, admin_auth, conversations as admin_conversations
+    admin, admin_auth, conversations as admin_conversations,
+    preregistrations as admin_preregistrations
 )
 
 # Debug routes
@@ -56,6 +57,7 @@ api_router.include_router(conversations.router, prefix="/conversations", tags=["
 api_router.include_router(admin_auth.router, prefix="/admin/auth", tags=["Admin Auth"])
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
 api_router.include_router(admin_conversations.router, prefix="/admin", tags=["Admin Conversations"])
+api_router.include_router(admin_preregistrations.router, prefix="/admin", tags=["Admin Preregistrations"])
 
 # Debug routes
 api_router.include_router(debug_email.router, prefix="/_debug", tags=["Debug"])

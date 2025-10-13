@@ -52,7 +52,7 @@ class AdminUserResponse(BaseModel):
             "created_at": user.created_at,
             "updated_at": user.updated_at,
             "username": user.profile.username if user.profile else None,
-            "avatar_url": f"{CDN_URL}/{user.profile.avatar_url}" if user.profile else None
+            "avatar_url": f"{CDN_URL}/{user.profile.avatar_url}" if user.profile and user.profile.avatar_url else None
         }
         return cls(**data)
 
@@ -174,7 +174,7 @@ class MediaAssetData(BaseModel):
 
 class AdminPostDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     # 投稿情報
     id: str
     description: Optional[str]
@@ -186,3 +186,25 @@ class AdminPostDetailResponse(BaseModel):
     profile_username: Optional[str]
     profile_avatar_url: Optional[str]
     media_assets: Dict[str, MediaAssetData]
+
+class AdminPreregistrationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    email: str
+    x_name: str
+    created_at: datetime
+    updated_at: datetime
+
+    @classmethod
+    def from_orm(cls, preregistration):
+        data = {
+            "id": str(preregistration.id),
+            "name": preregistration.name,
+            "email": preregistration.email,
+            "x_name": preregistration.x_name,
+            "created_at": preregistration.created_at,
+            "updated_at": preregistration.updated_at,
+        }
+        return cls(**data)
