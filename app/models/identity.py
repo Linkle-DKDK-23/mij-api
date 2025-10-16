@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .user import Users
 
 class IdentityVerifications(Base):
+    """身元確認"""
     __tablename__ = "identity_verifications"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
@@ -25,6 +26,7 @@ class IdentityVerifications(Base):
     documents: Mapped[list["IdentityDocuments"]] = relationship("IdentityDocuments", back_populates="verification")
 
 class IdentityDocuments(Base):
+    """身元確認書類"""
     __tablename__ = "identity_documents"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())

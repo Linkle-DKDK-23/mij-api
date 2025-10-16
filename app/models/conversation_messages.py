@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .conversations import Conversations
 
 class ConversationMessages(Base):
+    """会話ルームメッセージ"""
     __tablename__ = "conversation_messages"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())

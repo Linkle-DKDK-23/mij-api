@@ -8,7 +8,7 @@ import tempfile
 from decimal import Decimal
 
 from app.crud.media_rendition_jobs_crud import update_media_rendition_job, get_media_rendition_job_by_id
-from app.crud.media_assets_crud import get_media_asset_by_id
+from app.crud.media_assets_crud import get_media_asset_by_id, update_media_asset
 from app.crud.media_rendition_crud import create_media_rendition
 from app.crud.post_crud import update_post_status
 from app.constants.enums import MediaRenditionJobStatus, MediaRenditionKind, PostStatus
@@ -157,28 +157,22 @@ def _handle_final_hls_completion(db: Session, webhook_data: dict) -> None:
     # 動画の再生時間を取得
     duration_sec = _get_video_duration(webhook_data["detail"], storage_key)
     
-    # メディアレンディションの作成
-    media_rendition_data = {
-        "asset_id": asset.id,
-        "kind": kind,
-        "storage_key": storage_key,
-        "mime_type": mime_type,
-        "bytes": size_bytes or 0,
-        "width": None,
-        "height": None,
-        "duration_sec": duration_sec,
-    }
-    
-    media_rendition = create_media_rendition(db, media_rendition_data)
-    
     # レンディションジョブを更新
     update_data = {
         "status": webhook_data["status"],
         "output_key": storage_key,
-        "rendition_id": media_rendition.id
-    }
-    
+        "mime_type": mime_type,
+        "kind": kind,
+    }    
     update_media_rendition_job(db, webhook_data["rendition_job_id"], update_data)
+
+    # media_asset 更新
+    media_asset_update_data = {
+        "bytes": size_bytes or 0,
+        "storage_key": storage_key,
+        "duration_sec": duration_sec
+    }
+    update_media_asset(db, asset.id, media_asset_update_data)
     
     # 投稿のステータスを承認に更新
     post = update_post_status(db, asset.post_id, PostStatus.APPROVED)

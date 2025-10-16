@@ -1,8 +1,9 @@
+from math import fabs
 from fastapi import APIRouter, HTTPException, Depends, Path
 from sqlalchemy.orm import Session
 from app.db.base import get_db
 from app.services.s3.media_covert import build_media_rendition_job_settings, build_hls_abr4_settings
-from app.crud.media_assets_crud import get_media_asset_by_post_id
+from app.crud.media_assets_crud import get_media_asset_by_post_id, update_media_asset
 from app.schemas.post_media import PoseMediaCovertRequest
 from app.services.s3.keygen import (
     transcode_mc_hls_prefix, 
@@ -64,7 +65,6 @@ def _create_media_convert_job(
     # ジョブ作成
     media_rendition_job_data = {
         "asset_id": asset_row.id,
-        "rendition_id": None,
         "kind": job_kind,
         "input_key": asset_row.storage_key,
         "output_prefix": output_prefix,
@@ -108,7 +108,8 @@ def _create_media_convert_job(
 
     # ジョブ設定更新
     update_media_rendition_job(db, media_rendition_job.id, update_data)
-    return media_rendition_job
+    db.commit()
+    return True
 
 
 def _process_image_asset(
@@ -154,23 +155,23 @@ def _process_image_asset(
     # ベースキーから派生ファイルの最終保存キーを決定
     variant_keys = _make_variant_keys(base_output_key)
 
-    last_rendition = None
-    # 5) アップロード（SSE-KMS, CacheControl 付き）
+    # 5) DB: media_asset 更新
+    stem, _ext = base_output_key.rsplit(".", 1)
+
+    # 6) アップロード（SSE-KMS, CacheControl 付き）
     for filename, (bytes_data, ctype) in variants.items():
         dst_key = variant_keys[filename]
         _s3_put_bytes(MEDIA_BUCKET_NAME, dst_key, bytes_data, ctype)
 
-        # 6) DB: media_rendition 登録（bytesは保存サイズ）
-        media_rendition_data = {
-            "asset_id": asset_row.id,
-            "kind": MediaRenditionKind.FFMPEG,  # 既存Enum流用。新設するなら IMAGE_PIPELINE に変更
-            "storage_key": dst_key,
-            "mime_type": ctype,
-            "bytes": len(bytes_data),
-        }
-        last_rendition = create_media_rendition(db, media_rendition_data)
-    
-    return last_rendition
+        # 元画像の場合は、storage_keyを更新
+        if filename == "original.jpg":
+            media_asset_update_data = {
+                "storage_key": stem,
+                "bytes": len(bytes_data),
+            }
+            update_media_asset(db, asset_row.id, media_asset_update_data)
+
+    return True
 
 
 @router.post("/transcode_mc/{post_id}/{post_type}")
@@ -203,8 +204,8 @@ def transcode_mc_unified(
         if not assets:
             raise HTTPException(status_code=404, detail="Media asset not found")
 
-        last_rendition = None
 
+        result = False
         for row in assets:
             # HLS ABR4処理（ビデオの場合のみ）
             if type == "video":
@@ -226,15 +227,14 @@ def transcode_mc_unified(
 
             # FFmpeg処理（画像の場合のみ）
             if type == "image":
-                last_rendition = _process_image_asset(db, row, post_id)
-
-        # 投稿ステータスの更新
-        post = update_post_status(db, post_id, PostStatus.APPROVED)
-        db.commit()
-        
-        if last_rendition:
-            db.refresh(last_rendition)
-            db.refresh(post)
+                result = _process_image_asset(db, row, post_id)
+                if not result:
+                    raise HTTPException(status_code=500, detail="Image processing failed")
+                else:
+                    # 投稿ステータスの更新
+                    post = update_post_status(db, post_id, PostStatus.APPROVED)
+                    db.commit()
+                    db.refresh(post)
 
         return {"status": True, "message": f"Media conversion completed for {type}"}
 

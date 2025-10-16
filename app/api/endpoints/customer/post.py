@@ -16,6 +16,7 @@ from app.models.tags import Tags
 from typing import List
 import os
 from os import getenv
+from datetime import datetime
 from app.api.commons.utils import get_video_duration
 
 router = APIRouter()
@@ -35,68 +36,49 @@ async def create_post_endpoint(
     user = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+    """投稿を作成する"""
     try:
         # 可視性を判定
         visibility = _determine_visibility(post_create.single, post_create.plan)
         
-        # 投稿データを準備
-        post_data = {
-            "creator_user_id": user.id,
-            "description": post_create.description,
-            "scheduled_at": post_create.formattedScheduledDateTime if post_create.scheduled else None,
-            "expiration_at": post_create.expirationDate if post_create.expiration else None,
-            "visibility": visibility,
-            "post_type": POST_TYPE_MAPPING.get(post_create.post_type),
-        }
+        # 関連オブジェクトを初期化
+        price = None
+        plan_posts = []
+        category_posts = []
+        tag_posts = []
         
         # 投稿を作成
-        post = create_post(db, post_data)
+        post = _create_post(db, post_create, user.id, visibility)
         
-        # 単品販売の設定
-        individual_plan = None
-        individual_price = None
+        # 単品販売の場合、価格を登録
         if post_create.single:
-            individual_plan, individual_price = _create_individual_plan(
-                db, user.id, post_create.price
-            )
-        
-        # プランを投稿に紐づけ
-        if post_create.plan or post_create.single:
-            _link_plans_to_post(
-                db, post.id, post_create.plan_ids, 
-                individual_plan.id if individual_plan else None
-            )
+            price = _create_price(db, post.id, post_create.price)
+
+        # プランの場合、プランを登録
+        if post_create.plan:
+            plan_posts = _create_plan(db, post.id, post_create.plan_ids)
         
         # カテゴリを投稿に紐づけ
-        category_posts = []
         if post_create.category_ids:
             category_posts = _create_post_categories(db, post.id, post_create.category_ids)
         
         # タグを投稿に紐づけ
-        post_tag = None
         if post_create.tags:
-            post_tag = _create_post_tag(db, post.id, post_create.tags)
+            tag_posts = _create_post_tag(db, post.id, post_create.tags)
         
         # データベースをコミット
         db.commit()
-        db.refresh(post)
         
-        # 必要に応じて他のオブジェクトもリフレッシュ
-        if individual_plan:
-            db.refresh(individual_plan)
-        if individual_price:
-            db.refresh(individual_price)
-        if category_posts:
-            for category_post in category_posts:
-                db.refresh(category_post)
-        if post_tag:
-            db.refresh(post_tag)
+        # オブジェクトをリフレッシュ
+        _refresh_related_objects(
+            db, post, price, plan_posts, category_posts, tag_posts
+        )
         
         return post
         
     except Exception as e:
-        print("投稿作成エラーが発生しました", e)
         db.rollback()
+        print("投稿作成エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/detail")
@@ -240,6 +222,18 @@ def _link_plans_to_post(db: Session, post_id: str, plan_ids: list, individual_pl
         }
         create_post_plan(db, plan_post_data)
 
+def _create_post(db: Session, post_data: dict, user_id: str, visibility: int):
+    """投稿を作成する"""
+    post_data = {
+        "creator_user_id": user_id,
+        "description": post_data.description,
+        "scheduled_at": post_data.formattedScheduledDateTime if post_data.scheduled else None,
+        "expiration_at": post_data.expirationDate if post_data.expiration else None,
+        "visibility": visibility,
+        "post_type": POST_TYPE_MAPPING.get(post_data.post_type),
+    }
+    return create_post(db, post_data)
+
 def _create_post_categories(db: Session, post_id: str, category_ids: list):
     """投稿にカテゴリを紐づける"""
     category_posts = []
@@ -272,3 +266,53 @@ def _create_post_tag(db: Session, post_id: str, tag_name: str):
         "tag_id": tag.id,
     }
     return create_post_tag(db, post_tag_data)
+
+def _refresh_related_objects(
+    db: Session, 
+    post, 
+    price=None, 
+    plan_posts=None, 
+    category_posts=None, 
+    tag_posts=None
+):
+    """関連オブジェクトをリフレッシュする"""
+    db.refresh(post)
+    
+    if price:
+        db.refresh(price)
+    
+    if plan_posts:
+        for plan_post in plan_posts:
+            db.refresh(plan_post)
+    
+    if category_posts:
+        for category_post in category_posts:
+            db.refresh(category_post)
+    
+    if tag_posts:
+        for tag_post in tag_posts:
+            db.refresh(tag_post)
+
+def _create_price(db: Session, post_id: str, price: int):
+    """投稿に価格を紐づける"""
+    
+    price_data = {
+        "post_id": post_id,
+        "type": PriceType.SINGLE,
+        "currency": "JPY",
+        "is_active": True,
+        "price": price,
+        "starts_at": datetime.now(),
+    }
+    return create_price(db, price_data)
+
+def _create_plan(db: Session, post_id: str, plan_ids: list):
+    """投稿にプランを紐づける"""
+    plan_post = []
+    for plan_id in plan_ids:
+        plan_post_data = {
+            "post_id": post_id,
+            "plan_id": plan_id,
+        }
+        plan_post.append(create_post_plan(db, plan_post_data))
+    return plan_post

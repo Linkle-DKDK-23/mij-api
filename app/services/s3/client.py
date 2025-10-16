@@ -3,6 +3,9 @@ import os
 from functools import lru_cache
 import boto3
 from botocore.config import Config
+from typing import Literal
+Resource = Literal["identity"]
+
 
 AWS_REGION = os.environ.get("AWS_REGION", "ap-northeast-1")
 
@@ -13,6 +16,34 @@ def s3_client():
         endpoint_url=f"https://s3.{AWS_REGION}.amazonaws.com",
         config=Config(signature_version="s3v4")
     )
+
+def _bucket_and_kms(resource: Resource):
+    """
+    バケットとKMSキーを取得
+
+    Args:
+        resource (Resource): リソース
+    """
+    if resource == "identity":
+        return KYC_BUCKET_NAME, KMS_ALIAS_KYC
+    raise ValueError("unknown resource")
+
+def bucket_exit_check(resource: Resource, key: str):
+
+    """
+    バケット存在確認
+
+    Args:
+        resource (Resource): リソース
+        key (str): キー
+    """
+    bucket, _ = _bucket_and_kms(resource)
+    client = s3_client()
+    try:
+        client.head_object(Bucket=bucket, Key=key)
+    except Exception:
+        return False
+    return True
 
 @lru_cache(maxsize=1)
 def s3_client_for_mc():

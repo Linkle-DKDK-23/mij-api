@@ -19,7 +19,7 @@ from app.crud.identity_crud import create_identity_verification, create_identity
 from app.db.base import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-from app.services.s3.s3_service import bucket_exit_check
+from app.services.s3.client import bucket_exit_check
 from app.crud.creater_crud import update_creator_status
 from app.constants.enums import CreatorStatus
 router = APIRouter()

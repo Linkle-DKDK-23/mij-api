@@ -483,8 +483,7 @@ def get_post_by_id(db: Session, post_id: str) -> Dict[str, Any]:
                 'storage_key': row.MediaAssets.storage_key,
                 'file_size': row.MediaAssets.bytes,
                 'duration': float(row.MediaAssets.duration_sec) if row.MediaAssets.duration_sec else None,
-                'width': row.MediaAssets.width,
-                'height': row.MediaAssets.height,
+                'orientation': row.MediaAssets.orientation,
                 'created_at': row.MediaAssets.created_at.isoformat() if row.MediaAssets.created_at else None,
                 'updated_at': None
             }
@@ -517,9 +516,9 @@ def get_post_by_id(db: Session, post_id: str) -> Dict[str, Any]:
         'created_at': post.created_at.isoformat() if post.created_at else None,
         # ユーザー情報
         'user_id': str(user.id),
-        'user_profile_name': user.profile_name,
+        'profile_name': user.profile_name,
         # プロフィール情報
-        'profile_username': profile.username,
+        'username': profile.username,
         'profile_avatar_url': f"{CDN_URL}/{profile.avatar_url}" if profile.avatar_url else None,
         'post_type': post.post_type,
         # メディアアセット情報

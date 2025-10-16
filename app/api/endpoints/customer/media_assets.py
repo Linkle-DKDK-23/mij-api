@@ -16,7 +16,7 @@ from app.schemas.commons import PresignResponseItem, UploadItem
 from typing import Dict, List, Union
 from app.crud.media_assets_crud import create_media_asset
 from app.models.posts import Posts
-from app.constants.enums import MediaAssetKind
+from app.constants.enums import MediaAssetKind, MediaAssetOrientation
 
 router = APIRouter()
 
@@ -27,6 +27,13 @@ KIND_MAPPING = {
     "images": MediaAssetKind.IMAGES,
     "main": MediaAssetKind.MAIN_VIDEO,
     "sample": MediaAssetKind.SAMPLE_VIDEO,
+}
+
+# 文字列orientationから整数orientationへのマッピング
+ORIENTATION_MAPPING = {
+    "portrait": MediaAssetOrientation.PORTRAIT,
+    "landscape": MediaAssetOrientation.LANDSCAPE,
+    "square": MediaAssetOrientation.SQUARE,
 }
 
 @router.post("/presign-image-upload")
@@ -79,6 +86,7 @@ async def presign_post_media_image(
                 "post_id": f.post_id,
                 "kind": KIND_MAPPING[f.kind],
                 "storage_key": key,
+                "orientation": ORIENTATION_MAPPING[f.orientation],
                 "mime_type": f.content_type,
                 "bytes": 0,
             }
@@ -133,6 +141,7 @@ async def presign_post_media_video(
             media_asset_data = {
                 "post_id": f.post_id,
                 "kind": KIND_MAPPING[f.kind],
+                "orientation": ORIENTATION_MAPPING[f.orientation],
                 "storage_key": key,
                 "mime_type": f.content_type,
                 "bytes": 0,

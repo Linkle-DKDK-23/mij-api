@@ -143,23 +143,25 @@ def get_user_plans(db: Session, user_id: UUID) -> List[PlanResponse]:
     ユーザーのプラン一覧を取得
     """
     # priceテーブルと結合して金額情報を取得する
-    plans = db.query(Plans).filter(
-        Plans.creator_user_id == user_id,
-        Plans.type == PlanStatus.PLAN,
-        Plans.deleted_at.is_(None)
-    ).join(Prices, Plans.id == Prices.plan_id).all()
+    plans = (
+        db.query(Plans)
+        .filter(
+            Plans.creator_user_id == user_id,
+            Plans.type == PlanStatus.PLAN,
+            Plans.deleted_at.is_(None)
+        )
+    ).all()
 
     # レスポンス内容を整形する
     plans_response = []
-    for plan in plans:
-        # プランに関連する価格を取得（最初の価格を使用）
-        price = db.query(Prices).filter(Prices.plan_id == plan.id).first()
-        if price:
+
+    if plans:
+        for plan in plans:
             plans_response.append(PlanResponse(
                 id=plan.id,
                 name=plan.name,
                 description=plan.description,
-                price=price.price
+                price=plan.price
             ))
 
     return plans_response

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .categories import Categories
 
 class Creators(Base):
+    """クリエイター"""
     __tablename__ = "creators"
 
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

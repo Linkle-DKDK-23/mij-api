@@ -34,10 +34,10 @@ class SubscribedPlanResponse(BaseModel):
         from_attributes = True
 
 class PlanListResponse(BaseModel):
-    plans: List[PlanResponse]
+    plans: List[PlanResponse] = []
 
 class SubscribedPlanListResponse(BaseModel):
-    subscribed_plans: List[SubscribedPlanResponse]
+    subscribed_plans: List[SubscribedPlanResponse] = []
 
 class PlanPostResponse(BaseModel):
     id: UUID
@@ -56,4 +56,4 @@ class PlanPostResponse(BaseModel):
         from_attributes = True
 
 class PlanPostsResponse(BaseModel):
-    posts: List[PlanPostResponse]
+    posts: List[PlanPostResponse] = []

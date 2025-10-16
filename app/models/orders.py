@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .plans import Plans
 
 class Orders(Base):
+    """注文（単品や初回サブスク課金など）"""
     __tablename__ = "orders"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
@@ -29,6 +30,7 @@ class Orders(Base):
     items: Mapped[list["OrderItems"]] = relationship("OrderItems", back_populates="order")
 
 class OrderItems(Base):
+    """注文アイテム（単品や初回サブスク課金など）"""
     __tablename__ = "order_items"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())

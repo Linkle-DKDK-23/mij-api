@@ -30,28 +30,19 @@ def create_user_plan(
             "name": plan_data.name,
             "description": plan_data.description,
             "type": PlanStatus.PLAN,
+            "price": plan_data.price,
         }   
         plan = create_plan(db, plan_create_data)
 
-        # 価格を登録
-        price_create_data = {
-            "plan_id": plan.id,
-            "type": PriceType.PLAN,
-            "currency": "JPY",
-            "price": plan_data.price,
-        }
-        price = create_price(db, price_create_data)
-
         db.commit()
         db.refresh(plan)
-        db.refresh(price)
 
         # 返却用に整形
         plan_response = PlanResponse(
             id=plan.id,
             name=plan.name,
             description=plan.description,
-            price=price.price,
+            price=plan.price,
         )
 
         return plan_response

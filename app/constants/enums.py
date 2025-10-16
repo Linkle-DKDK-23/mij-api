@@ -74,6 +74,9 @@ class MediaAssetKind:
     IMAGES = 3 # 画像（複数）
     MAIN_VIDEO = 4 # メインビデオ
     SAMPLE_VIDEO = 5 # サンプルビデオ
+    IMAGE_ORIGINAL = 6 # 画像（オリジナル）
+    IMAGE_1080W = 7 # 画像（1080w）
+    IMAGE_MOSAIC = 8 # 画像（モザイク）
 
 # レンディションの種類
 class RenditionKind:
@@ -127,5 +130,8 @@ class ConversationType:
     GROUP = 3 # グループ
     DELUSION = 4 # 妄想の間
 
-class WelcomeMessage:
-    MESSAGE = "妄想の種へようこそ！\n\nこちらはあなたの妄想を自由に表現できる特別な空間です。\n何でもお気軽にお話しください。"
+# メディアアセットの向き
+class MediaAssetOrientation:
+    PORTRAIT = 1 # 縦
+    LANDSCAPE = 2 # 横
+    SQUARE = 3 # 正方形

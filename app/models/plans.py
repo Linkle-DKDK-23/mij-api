@@ -23,6 +23,7 @@ class Plans(Base):
     creator_user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    price: Mapped[int] = mapped_column(BigInteger, nullable=False)
     type: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     status: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
@@ -33,7 +34,6 @@ class Plans(Base):
     subscriptions: Mapped[List["Subscriptions"]] = relationship("Subscriptions", back_populates="plan")
     post_plans: Mapped[List["PostPlans"]] = relationship("PostPlans", back_populates="plan")
     pure_purchases: Mapped[List["Purchases"]] = relationship("Purchases", back_populates="plan")
-    prices: Mapped[List["Prices"]] = relationship("Prices", back_populates="plan")
 
 class PostPlans(Base):
     __tablename__ = "post_plans"

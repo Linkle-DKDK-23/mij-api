@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .conversations import Conversations
 
 class ConversationParticipants(Base):
+    """会話ルーム参加者"""
     __tablename__ = "conversation_participants"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())

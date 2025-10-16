@@ -68,3 +68,14 @@ def get_media_asset_by_id(db: Session, asset_id: str) -> MediaAssets:
     メディアアセット取得
     """
     return db.query(MediaAssets).filter(MediaAssets.id == asset_id).first()
+
+def update_media_asset(db: Session, asset_id: str, update_data: dict) -> MediaAssets:
+    """
+    メディアアセット更新
+    """
+    # 辞書を直接渡して更新
+    db.query(MediaAssets).filter(MediaAssets.id == asset_id).update(update_data)
+    db.flush()
+    
+    # 更新されたオブジェクトを取得して返す
+    return db.query(MediaAssets).filter(MediaAssets.id == asset_id).first()

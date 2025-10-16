@@ -10,7 +10,7 @@ from app.models.conversation_participants import ConversationParticipants
 from app.models.user import Users
 from app.constants.enums import ConversationType
 from app.models.profiles import Profiles
-from app.constants.enums import WelcomeMessage
+from app.constants.messages import WelcomeMessage
 
 
 # ========== 会話管理 ==========

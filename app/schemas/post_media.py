@@ -5,16 +5,19 @@ from uuid import UUID
 
 ImageKind = Literal["ogp", "thumbnail", "images"]
 VideoKind = Literal["main", "sample"]
+Orientation = Literal["portrait", "landscape", "square"]
 
 class PostMediaImageFileSpec(BaseModel):
     post_id: UUID = Field(..., description='投稿ID')
     kind: ImageKind
+    orientation: Orientation
     content_type: Literal["image/jpeg", "image/png", "image/webp"]
     ext: Literal["mp4", "jpg", "jpeg", "png", "webp"]
 
 class PostMediaVideoFileSpec(BaseModel):
     post_id: UUID = Field(..., description='投稿ID')
     kind: VideoKind
+    orientation: Orientation
     content_type: Literal["video/mp4", "video/webm", "video/quicktime"]
     ext: Literal["mp4", "webm", "mov"]
 

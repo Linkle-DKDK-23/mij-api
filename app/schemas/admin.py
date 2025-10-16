@@ -182,8 +182,8 @@ class AdminPostDetailResponse(BaseModel):
     created_at: Optional[str]
     post_type: int
     user_id: str
-    user_profile_name: str
-    profile_username: Optional[str]
+    profile_name: str
+    username: Optional[str]
     profile_avatar_url: Optional[str]
     media_assets: Dict[str, MediaAssetData]
 
