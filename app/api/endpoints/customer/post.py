@@ -11,7 +11,7 @@ from app.crud.post_plans_crud import create_post_plan
 from app.crud.tags_crud import exit_tag, create_tag
 from app.crud.post_tags_crud import create_post_tag
 from app.crud.post_categories_crud import create_post_category
-from app.crud.top_crud import get_recent_posts
+from app.crud.post_crud import get_recent_posts
 from app.models.tags import Tags
 from typing import List
 import os
@@ -176,7 +176,6 @@ async def get_new_arrivals(
     except Exception as e:
         print("新着投稿取得エラーが発生しました", e)
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # utils
 def _determine_visibility(single: bool, plan: bool) -> int:

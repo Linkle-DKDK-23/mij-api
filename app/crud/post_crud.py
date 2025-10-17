@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 
 # エイリアスを定義
 ThumbnailAssets = aliased(MediaAssets)
-
+VideoAssets = aliased(MediaAssets)
 # ========== 投稿管理 ==========
 
 
@@ -271,6 +271,8 @@ def get_post_detail_by_id(db: Session, post_id: str, user_id: str | None) -> dic
         **media_info
     }
 
+# ========== いいねした投稿用 ==========
+
 def get_liked_posts_by_user_id(db: Session, user_id: UUID, limit: int = 50) -> List[tuple]:
     """
     ユーザーがいいねした投稿を取得（top_crud.pyの121-126行目の項目と合わせる）
@@ -427,6 +429,81 @@ def get_bought_posts_by_user_id(db: Session, user_id: UUID) -> List[tuple]:
         .all()
     )
 
+# ========== トップページ用 ==========
+
+def get_ranking_posts(db: Session, limit: int = 5):
+    """
+    トップページ用の投稿を取得
+    """
+    return (
+        db.query(
+            Posts,
+            func.count(Likes.post_id).label('likes_count'),
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            VideoAssets.duration_sec.label('duration_sec'),
+        )
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        # サムネイル用のMediaAssets（kind=2）
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        # メインビデオ用のMediaAssets（kind=4）
+        .outerjoin(VideoAssets, (Posts.id == VideoAssets.post_id) & (VideoAssets.kind == MediaAssetKind.MAIN_VIDEO))
+        .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(
+            Posts.id, 
+            Users.profile_name,
+            Profiles.username, 
+            Profiles.avatar_url, 
+            ThumbnailAssets.storage_key, 
+            VideoAssets.duration_sec,
+        )
+        .order_by(desc('likes_count'))
+        .limit(limit)
+        .all()
+    )
+
+def get_recent_posts(db: Session, limit: int = 5):
+    """
+    最新の投稿を取得（いいね数も含む）
+    """
+    return (
+        db.query(
+            Posts,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key.label('thumbnail_key'),
+            func.count(Likes.post_id).label('likes_count'),
+            VideoAssets.duration_sec.label('duration_sec')
+        )
+        .join(Users, Posts.creator_user_id == Users.id)
+        .join(Profiles, Users.id == Profiles.user_id)
+        # サムネイル用のMediaAssets（kind=2）
+        .outerjoin(ThumbnailAssets, (Posts.id == ThumbnailAssets.post_id) & (ThumbnailAssets.kind == MediaAssetKind.THUMBNAIL))
+        # メインビデオ用のMediaAssets（kind=4）
+        .outerjoin(VideoAssets, (Posts.id == VideoAssets.post_id) & (VideoAssets.kind == MediaAssetKind.MAIN_VIDEO))
+        # いいね数を取得するためのLikesテーブル
+        .outerjoin(Likes, Posts.id == Likes.post_id)
+        .filter(Posts.status == PostStatus.APPROVED)
+        .group_by(
+            Posts.id,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            ThumbnailAssets.storage_key,
+            VideoAssets.duration_sec
+        )
+        .order_by(desc(Posts.created_at))
+        .limit(limit)
+        .all()
+    )
+
+# ========== ランキング用 ==========
+
 def get_ranking_posts_all_time(db: Session, limit: int = 500):
     """
     全期間でいいね数が多い投稿を取得
@@ -536,6 +613,7 @@ def get_ranking_posts_daily(db: Session, limit: int = 50):
         .limit(limit)
         .all()
     )
+
 
 # ========== 作成・更新・削除系 ==========
 def create_post(db: Session, post_data: dict):

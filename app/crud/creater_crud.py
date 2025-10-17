@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from uuid import UUID
 from datetime import datetime
 from app.models.creators import Creators
@@ -172,6 +172,45 @@ def get_creators(db: Session, limit: int = 50):
         .outerjoin(Follows, Follows.creator_user_id == Users.id)
         .filter(Users.role == AccountType.CREATOR)
         .group_by(Users.id, Users.profile_name, Profiles.username, Profiles.avatar_url)
+        .order_by(desc(Users.created_at))
+        .limit(limit)
+        .all()
+    )
+
+def get_top_creators(db: Session, limit: int = 5):
+    """
+    フォロワー数上位のクリエイターを取得
+    """
+    return (
+        db.query(
+            Users,
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url,
+            func.count(Follows.creator_user_id).label('followers_count')
+        )
+        .join(Profiles, Users.id == Profiles.user_id)
+        .outerjoin(Follows, Users.id == Follows.creator_user_id)
+        .filter(Users.role == AccountType.CREATOR)
+        .group_by(Users.id, Users.profile_name, Profiles.username, Profiles.avatar_url)
+        .order_by(desc('followers_count'))
+        .limit(limit)
+        .all()
+    )
+
+def get_new_creators(db: Session, limit: int = 5):
+    """
+    登録順最新のクリエイターを取得
+    """
+    return (
+        db.query(
+            Users, 
+            Users.profile_name,
+            Profiles.username,
+            Profiles.avatar_url
+        )
+        .join(Profiles, Users.id == Profiles.user_id)
+        .filter(Users.role == AccountType.CREATOR)
         .order_by(desc(Users.created_at))
         .limit(limit)
         .all()
